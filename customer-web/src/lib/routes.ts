@@ -1,0 +1,15 @@
+export const routes = {
+  allergens: "/allergens",
+  basket: "/basket",
+  book: "/book",
+  checkout: "/checkout",
+  checkoutPayment: "/checkout/payment",
+  contact: "/#visit",
+  createYourOwn: "/menu/create-your-own",
+  home: "/",
+  menu: "/menu",
+  order: "/menu",
+  privacy: "/privacy",
+  story: "/#story",
+  visit: "/#visit",
+} as const;

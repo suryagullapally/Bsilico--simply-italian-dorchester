@@ -1,0 +1,405 @@
+"use client";
+
+import Link from "next/link";
+import {
+  type ChangeEvent,
+  type FormEvent,
+  useMemo,
+  useState,
+} from "react";
+import { Button } from "@/components/ui/Button";
+import type {
+  BookingErrors,
+  BookingState,
+} from "@/lib/booking/booking-types";
+import {
+  basilicoBookingDetails,
+  formatBookingDateLabel,
+  getBookingDateError,
+  getBookingTimeOptions,
+  getFirstBookingError,
+  getTodayDateValue,
+  hasBookingErrors,
+  initialBookingState,
+  normalizeBookingState,
+  validateBooking,
+} from "@/lib/booking/booking-utils";
+import { routes } from "@/lib/routes";
+
+export function BookingPageContent() {
+  const [booking, setBooking] = useState<BookingState>(initialBookingState);
+  const [errors, setErrors] = useState<BookingErrors>({});
+  const [submitted, setSubmitted] = useState(false);
+  const today = useMemo(() => getTodayDateValue(), []);
+  const timeOptions = useMemo(() => getBookingTimeOptions(), []);
+  const liveDateError = booking.date ? getBookingDateError(booking.date) : "";
+  const dateError = errors.date ?? liveDateError;
+  const partySizeLabel =
+    booking.partySize === 1
+      ? "1 guest"
+      : booking.partySize > 1
+        ? `${booking.partySize} guests`
+        : "Choose party size";
+
+  function commitBookingState(nextBooking: BookingState) {
+    setBooking(nextBooking);
+    setSubmitted(false);
+
+    if (hasBookingErrors(errors)) {
+      setErrors(validateBooking(nextBooking));
+    }
+  }
+
+  function updateBookingField(
+    field: "date" | "requests" | "time",
+    value: string,
+  ) {
+    commitBookingState({
+      ...booking,
+      [field]: value,
+    });
+  }
+
+  function updatePartySize(event: ChangeEvent<HTMLInputElement>) {
+    const nextPartySize = Number.parseInt(event.target.value, 10);
+
+    commitBookingState({
+      ...booking,
+      partySize: Number.isNaN(nextPartySize) ? 0 : nextPartySize,
+    });
+  }
+
+  function updateCustomerField(
+    field: keyof BookingState["customer"],
+    value: string,
+  ) {
+    commitBookingState({
+      ...booking,
+      customer: {
+        ...booking.customer,
+        [field]: value,
+      },
+    });
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const normalizedBooking = normalizeBookingState(booking);
+    const nextErrors = validateBooking(normalizedBooking);
+
+    if (hasBookingErrors(nextErrors)) {
+      setErrors(nextErrors);
+      setSubmitted(false);
+      focusFirstInvalidField(nextErrors);
+      return;
+    }
+
+    setBooking(normalizedBooking);
+    setErrors({});
+    setSubmitted(true);
+  }
+
+  return (
+    <div className="booking-page__layout">
+      <section className="booking-page__intro" aria-labelledby="book-page-title">
+        <Link className="booking-page__back" href={routes.home}>
+          ← Back to Basilico
+        </Link>
+
+        <div className="booking-page__header">
+          <p className="type-eyebrow booking-page__eyebrow">Book a table</p>
+          <h1 className="type-h1 booking-page__title" id="book-page-title">
+            Your table at Basilico.
+          </h1>
+          <p className="type-body booking-page__copy">
+            Choose your date, time and party size and send us your booking
+            request.
+          </p>
+        </div>
+
+        <article className="booking-details" aria-label="Restaurant details">
+          <div>
+            <p className="type-eyebrow booking-details__eyebrow">Visit us</p>
+            <address className="booking-details__address">
+              {basilicoBookingDetails.address.map((line) => (
+                <span key={line}>{line}</span>
+              ))}
+            </address>
+          </div>
+
+          <dl className="booking-details__list">
+            <div>
+              <dt>Phone</dt>
+              <dd>
+                <a href={basilicoBookingDetails.phoneHref}>
+                  {basilicoBookingDetails.phone}
+                </a>
+              </dd>
+            </div>
+            <div>
+              <dt>Opening hours</dt>
+              <dd>
+                <span>{basilicoBookingDetails.hours[0]}</span>
+                <span>{basilicoBookingDetails.hours[1]}</span>
+                <span>
+                  {basilicoBookingDetails.hours[2]} —{" "}
+                  {basilicoBookingDetails.hours[3]}
+                </span>
+              </dd>
+            </div>
+          </dl>
+        </article>
+      </section>
+
+      <form className="booking-form" onSubmit={handleSubmit} noValidate>
+        <section className="checkout-section" aria-labelledby="booking-date-title">
+          <header className="checkout-section__header">
+            <p className="type-eyebrow checkout-section__step">01</p>
+            <h2 className="type-h3 checkout-section__title" id="booking-date-title">
+              Date, time and guests
+            </h2>
+            <p className="type-small checkout-section__copy">
+              {basilicoBookingDetails.timingNotice}
+            </p>
+          </header>
+
+          <div className="checkout-field-grid">
+            <label className="checkout-field">
+              <span>Date</span>
+              <input
+                aria-describedby={dateError ? "booking-date-error" : undefined}
+                aria-invalid={Boolean(dateError)}
+                data-booking-field="date"
+                min={today}
+                onChange={(event) => updateBookingField("date", event.target.value)}
+                type="date"
+                value={booking.date}
+              />
+              {dateError ? (
+                <p className="checkout-field__error" id="booking-date-error">
+                  {dateError}
+                </p>
+              ) : null}
+            </label>
+
+            <label className="checkout-field">
+              <span>Time</span>
+              <select
+                aria-describedby={errors.time ? "booking-time-error" : undefined}
+                aria-invalid={Boolean(errors.time)}
+                data-booking-field="time"
+                onChange={(event) => updateBookingField("time", event.target.value)}
+                value={booking.time}
+              >
+                <option value="">Choose a time</option>
+                {timeOptions.map((time) => (
+                  <option key={time} value={time}>
+                    {time}
+                  </option>
+                ))}
+              </select>
+              {errors.time ? (
+                <p className="checkout-field__error" id="booking-time-error">
+                  {errors.time}
+                </p>
+              ) : null}
+            </label>
+
+            <label className="checkout-field">
+              <span>Party size</span>
+              <input
+                aria-describedby={
+                  errors.partySize ? "booking-party-size-error" : undefined
+                }
+                aria-invalid={Boolean(errors.partySize)}
+                data-booking-field="partySize"
+                min={1}
+                onChange={updatePartySize}
+                type="number"
+                value={booking.partySize || ""}
+              />
+              {errors.partySize ? (
+                <p className="checkout-field__error" id="booking-party-size-error">
+                  {errors.partySize}
+                </p>
+              ) : null}
+            </label>
+          </div>
+        </section>
+
+        <section className="checkout-section" aria-labelledby="booking-contact-title">
+          <header className="checkout-section__header">
+            <p className="type-eyebrow checkout-section__step">02</p>
+            <h2 className="type-h3 checkout-section__title" id="booking-contact-title">
+              Your details
+            </h2>
+          </header>
+
+          <div className="checkout-field-grid">
+            <label className="checkout-field">
+              <span>First name</span>
+              <input
+                aria-describedby={
+                  errors.firstName ? "booking-first-name-error" : undefined
+                }
+                aria-invalid={Boolean(errors.firstName)}
+                autoComplete="given-name"
+                data-booking-field="firstName"
+                onChange={(event) =>
+                  updateCustomerField("firstName", event.target.value)
+                }
+                type="text"
+                value={booking.customer.firstName}
+              />
+              {errors.firstName ? (
+                <p className="checkout-field__error" id="booking-first-name-error">
+                  {errors.firstName}
+                </p>
+              ) : null}
+            </label>
+
+            <label className="checkout-field">
+              <span>Last name</span>
+              <input
+                aria-describedby={
+                  errors.lastName ? "booking-last-name-error" : undefined
+                }
+                aria-invalid={Boolean(errors.lastName)}
+                autoComplete="family-name"
+                data-booking-field="lastName"
+                onChange={(event) =>
+                  updateCustomerField("lastName", event.target.value)
+                }
+                type="text"
+                value={booking.customer.lastName}
+              />
+              {errors.lastName ? (
+                <p className="checkout-field__error" id="booking-last-name-error">
+                  {errors.lastName}
+                </p>
+              ) : null}
+            </label>
+
+            <label className="checkout-field">
+              <span>Mobile number</span>
+              <input
+                aria-describedby={errors.phone ? "booking-phone-error" : undefined}
+                aria-invalid={Boolean(errors.phone)}
+                autoComplete="tel"
+                data-booking-field="phone"
+                inputMode="tel"
+                onChange={(event) => updateCustomerField("phone", event.target.value)}
+                type="tel"
+                value={booking.customer.phone}
+              />
+              {errors.phone ? (
+                <p className="checkout-field__error" id="booking-phone-error">
+                  {errors.phone}
+                </p>
+              ) : null}
+            </label>
+
+            <label className="checkout-field">
+              <span>Email address</span>
+              <input
+                aria-describedby={errors.email ? "booking-email-error" : undefined}
+                aria-invalid={Boolean(errors.email)}
+                autoComplete="email"
+                data-booking-field="email"
+                onChange={(event) => updateCustomerField("email", event.target.value)}
+                type="email"
+                value={booking.customer.email}
+              />
+              {errors.email ? (
+                <p className="checkout-field__error" id="booking-email-error">
+                  {errors.email}
+                </p>
+              ) : null}
+            </label>
+          </div>
+        </section>
+
+        <section className="checkout-section" aria-labelledby="booking-requests-title">
+          <header className="checkout-section__header">
+            <p className="type-eyebrow checkout-section__step">03</p>
+            <h2 className="type-h3 checkout-section__title" id="booking-requests-title">
+              Special requests
+            </h2>
+          </header>
+
+          <label className="checkout-field">
+            <span>Special requests</span>
+            <textarea
+              onChange={(event) => updateBookingField("requests", event.target.value)}
+              placeholder="High chair, accessibility needs, celebration or anything we should know."
+              value={booking.requests}
+            />
+          </label>
+
+          <p className="type-small checkout-allergy">
+            {basilicoBookingDetails.allergyMessage}
+          </p>
+        </section>
+
+        <section className="booking-summary" aria-labelledby="booking-summary-title">
+          <div>
+            <p className="type-eyebrow booking-summary__eyebrow">Booking request</p>
+            <h2 className="type-h3 booking-summary__title" id="booking-summary-title">
+              Review your table.
+            </h2>
+          </div>
+
+          <dl className="booking-summary__details">
+            <div>
+              <dt>Date</dt>
+              <dd>{formatBookingDateLabel(booking.date)}</dd>
+            </div>
+            <div>
+              <dt>Time</dt>
+              <dd>{booking.time || "Choose a time"}</dd>
+            </div>
+            <div>
+              <dt>Party size</dt>
+              <dd>{partySizeLabel}</dd>
+            </div>
+          </dl>
+
+          <div className="booking-form__actions">
+            <Button className="booking-form__button" type="submit">
+              SEND BOOKING REQUEST
+            </Button>
+
+            {submitted ? (
+              <p className="type-small booking-confirmation" aria-live="polite">
+                Booking request ready. Online booking submission will be connected
+                when the reservation service is enabled. For now, call{" "}
+                <a href={basilicoBookingDetails.phoneHref}>
+                  {basilicoBookingDetails.phone}
+                </a>
+                .
+              </p>
+            ) : null}
+          </div>
+        </section>
+      </form>
+    </div>
+  );
+}
+
+function focusFirstInvalidField(errors: BookingErrors) {
+  const firstInvalidField = getFirstBookingError(errors);
+
+  if (!firstInvalidField) {
+    return;
+  }
+
+  window.requestAnimationFrame(() => {
+    const field = document.querySelector<HTMLElement>(
+      `[data-booking-field="${firstInvalidField}"]`,
+    );
+
+    field?.focus();
+    field?.scrollIntoView({ block: "center" });
+  });
+}
