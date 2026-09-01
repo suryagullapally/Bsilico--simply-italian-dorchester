@@ -2,8 +2,11 @@ services:
   - type: web
     name: basilico-backend
     runtime: docker
+    region: frankfurt
+    plan: 0.5c-512mb
     rootDir: backend
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
     healthCheckPath: /api/health
     autoDeploy: false
     envVars:
@@ -12,7 +15,7 @@ services:
       - key: SESSION_COOKIE_SECURE
         value: "true"
       - key: SESSION_COOKIE_SAME_SITE
-        sync: false
+        value: lax
       - key: ADMIN_SESSION_TIMEOUT
         value: 8h
       - key: BASILICO_ALLOW_MANUAL_PAYMENT_STATUS
@@ -47,6 +50,8 @@ services:
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
+      - key: OPENROUTESERVICE_API_KEY
+        sync: false
       - key: BASILICO_ADMIN_EMAIL
         sync: false
       - key: BASILICO_ADMIN_PASSWORD
@@ -70,6 +75,8 @@ services:
 
 databases:
   - name: basilico-postgres
+    region: frankfurt
+    plan: 0.1c-256mb
     databaseName: basilico_db
     user: basilico
     postgresMajorVersion: "17"
