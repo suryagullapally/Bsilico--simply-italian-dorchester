@@ -34,17 +34,61 @@ NEXT_PUBLIC_ENABLE_DEV_PAYMENT_CONTROL=false
 Production must set explicit HTTPS URLs. Do not point production admin-web at
 localhost services.
 
-For Vercel, create the project with:
+For Cloudflare Workers, set production values in the Cloudflare dashboard:
 
-- root directory: `admin-web`
-- install command: `npm install`
-- build command: `npm run build`
-- output: Vercel default for Next.js
+```text
+NEXT_PUBLIC_API_BASE_URL=https://api.basilicodorchester.co.uk
+NEXT_PUBLIC_CUSTOMER_WEB_URL=https://basilicodorchester.co.uk
+NEXT_PUBLIC_ENABLE_DEV_PAYMENT_CONTROL=false
+```
 
 Set `NEXT_PUBLIC_API_BASE_URL` to the deployed backend HTTPS origin and
 `NEXT_PUBLIC_CUSTOMER_WEB_URL` to the deployed customer-web HTTPS origin.
 `NEXT_PUBLIC_*` values are compiled into the browser bundle, so update/redeploy
 after changing them.
+
+Never put admin passwords, database credentials, Stripe secret keys or backend
+secrets in admin-web. The admin app only needs public browser configuration.
+
+## Cloudflare Workers
+
+Admin-web is prepared for Cloudflare Workers with the same vinext approach used
+by customer-web.
+
+Local Next.js development remains:
+
+```bash
+npm run dev
+```
+
+Vinext/Workers commands:
+
+```bash
+npm run dev:vinext
+npm run build:vinext
+npm run start:vinext
+npm run preview
+npm run deploy
+```
+
+The Worker name is:
+
+```text
+basilico-admin
+```
+
+Cloudflare dashboard settings:
+
+```text
+Root directory: admin-web
+Install command: npm install
+Build command: npm run build:vinext
+Deploy command: npx wrangler deploy --config dist/server/wrangler.json
+Node.js version: 22
+```
+
+Do not attach `admin.basilicodorchester.co.uk` until the Worker has been
+validated on the generated Cloudflare preview URL.
 
 ## Authentication
 
@@ -75,6 +119,17 @@ registrable domain, the current `SameSite=lax` session cookie setting is the
 preferred first choice. If the final architecture uses truly different sites,
 set `SESSION_COOKIE_SAME_SITE=none` on the backend and keep
 `SESSION_COOKIE_SECURE=true`; do not disable CSRF.
+
+For the planned production hostnames:
+
+```text
+admin.basilicodorchester.co.uk
+api.basilicodorchester.co.uk
+```
+
+the Spring session cookie can remain scoped to the API hostname. Admin-web does
+not need to read it; authenticated API requests use `credentials: "include"`,
+and the browser sends the HttpOnly cookie back to the API origin.
 
 Admin-web is marked `noindex,nofollow` with metadata, `robots.txt` and an
 `X-Robots-Tag` response header. These are indexing hints, not authentication.
@@ -155,6 +210,28 @@ Admin-web sends conservative security headers:
 A Content Security Policy is intentionally not added in this phase so future
 Stripe/admin integrations can be allowlisted deliberately instead of broken by
 an incomplete policy.
+
+## Cloudflare QA
+
+Before connecting the custom admin domain, verify the generated Cloudflare
+preview URL:
+
+1. Open `/login`.
+2. Login with the production OWNER credentials.
+3. Confirm `GET /api/admin/auth/me` succeeds in the browser network panel.
+4. Refresh `/dashboard` and confirm the session remains authenticated.
+5. Navigate to `/orders`, `/bookings`, `/menu`, `/payments`, `/messages` and
+   `/settings/fulfilment`.
+6. Perform one safe mutation, such as saving fulfilment settings or toggling and
+   restoring a menu item's availability. Confirm CSRF succeeds.
+7. Logout.
+8. Confirm protected routes require login again.
+
+Expected production data source:
+
+```text
+https://api.basilicodorchester.co.uk
+```
 
 ## Fulfilment Settings
 
