@@ -8,7 +8,9 @@ import { BasketPageContent } from "@/components/cart/BasketPageContent";
 export const metadata: Metadata = {
   description:
     "Review your Basilico order basket before continuing to checkout.",
-  title: "Your Order | Basilico Dorchester",
+  title: {
+    absolute: "Your Order | Basilico Dorchester",
+  },
 };
 
 export default function BasketPage() {

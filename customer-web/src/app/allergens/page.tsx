@@ -8,7 +8,9 @@ import { routes } from "@/lib/routes";
 
 export const metadata: Metadata = {
   description: "Allergen guidance for Basilico customers in Dorchester.",
-  title: "Allergens | Basilico Dorchester",
+  title: {
+    absolute: "Allergens | Basilico Dorchester",
+  },
 };
 
 export default function AllergensPage() {

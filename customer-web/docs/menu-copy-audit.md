@@ -9,17 +9,17 @@ No corrections have been applied to the source menu data. Prices, dietary marker
 | Category | Dish | Current | Suggested | Confidence | Reason |
 | --- | --- | --- | --- | --- | --- |
 | BITES TO START | OLIVE DI NOCELLARA | Nocellara of Belice | Nocellara del Belice | MEDIUM | Likely refers to the Nocellara del Belice olive cultivar, but owner should confirm exact wording. |
-| BITES TO START | BRUSCHETTA | Ide of wychy tomatoes | Isle of Wight tomatoes | MEDIUM | Looks like a transcription/OCR error, but the intended ingredient/source should be confirmed. |
+| BITES TO START | BRUSCHETTA | Isle of wight tomatoes | Isle of Wight tomatoes | MEDIUM | Looks like a transcription/OCR error, but the intended ingredient/source should be confirmed. |
 | BITES TO START | BRUSCHETTA | marinading | marinated | HIGH | Obvious grammar correction. |
 | BITES TO START | BRUSCHETTA | sourough | sourdough | HIGH | Obvious spelling correction. |
 | BITES TO START | BRUSCHETTA | with a light and fresh base of parmesan | with a light, fresh finish of Parmesan | LOW | The current phrase is unclear; suggested wording changes the meaning and presentation. |
 | BITES TO START | OPPĀNE (THE BREAD) | Made from sourdough, toscano, bread stick and mini pizzette served with olive oil and basil. | Made with sourdough, Toscano bread, breadsticks and mini pizzette, served with olive oil and basil. | MEDIUM | Sentence needs grammar and pluralisation work, but the exact bread selection should be confirmed. |
-| BITES TO START | PIADINA E CREMA DI POMODORO | Slow roastedisle of wychy tomato hummus | Slow-roasted Isle of Wight tomato hummus | MEDIUM | Looks like multiple transcription errors joined together; likely correction should be confirmed. |
+| BITES TO START | PIADINA E CREMA DI POMODORO | Slow roasted isle of wight tomato hummus | Slow-roasted Isle of Wight tomato hummus | MEDIUM | Looks like multiple transcription errors joined together; likely correction should be confirmed. |
 | BITES TO START | PIADINA E CREMA DI POMODORO | home made | homemade | HIGH | Obvious spelling/style correction. |
 | BITES TO START | PIADINA E CREMA DI POMODORO | home made fresh meat | homemade fresh bread | LOW | "meat" conflicts with the dish style and dietary markers, but changing it would materially alter the item. |
-| BITES TO START | SFIZIO AL POMODORO | campana isle of wychy tomato | Campania, Isle of Wight tomato | MEDIUM | Likely refers to Campania mozzarella and Isle of Wight tomato, but this should be owner-approved. |
+| BITES TO START | SFIZIO AL POMODORO | campana isle of wight tomato | Campania, Isle of Wight tomato | MEDIUM | Likely refers to Campania mozzarella and Isle of Wight tomato, but this should be owner-approved. |
 | BITES TO START | SFIZIO AL POMODORO | trapani salt, grana padano | Trapani salt, Grana Padano | HIGH | Proper nouns should be capitalised. |
-| BITES TO START | TAGLIERE MISTO (A SHARING PLATTER FOR 2) | Buffalo mozzarella from campana isle of wychy tomato, beef tomato with trapani salt, grana padano, rocket, onions and extra basil. | Owner to confirm the intended sharing platter description. | LOW | Description duplicates SFIZIO AL POMODORO and does not read like a sharing platter. |
+| BITES TO START | TAGLIERE MISTO (A SHARING PLATTER FOR 2) | Buffalo mozzarella from campana isle of wight tomato, beef tomato with trapani salt, grana padano, rocket, onions and extra basil. | Owner to confirm the intended sharing platter description. | LOW | Description duplicates SFIZIO AL POMODORO and does not read like a sharing platter. |
 | SOURDOUGH PIZZA & CALZONE | PIZZA MARGHERITA | Fresh basil | fresh basil | HIGH | Mid-sentence capitalisation is inconsistent. |
 | SOURDOUGH PIZZA & CALZONE | PICCANTE FORMAGGIATA | Ficante Formaggiata | Piccante Formaggiata | HIGH | Description should match the dish name. |
 | SOURDOUGH PIZZA & CALZONE | PICCANTE FORMAGGIATA | o must-try | a must-try | HIGH | Obvious typo. |
@@ -69,12 +69,12 @@ All MEDIUM and LOW confidence items should be confirmed before applying correcti
 | Category | Dish | Current | Suggested | Confidence |
 | --- | --- | --- | --- | --- |
 | BITES TO START | OLIVE DI NOCELLARA | Nocellara of Belice | Nocellara del Belice | MEDIUM |
-| BITES TO START | BRUSCHETTA | Ide of wychy tomatoes | Isle of Wight tomatoes | MEDIUM |
+| BITES TO START | BRUSCHETTA | Isle of wight tomatoes | Isle of Wight tomatoes | MEDIUM |
 | BITES TO START | BRUSCHETTA | with a light and fresh base of parmesan | with a light, fresh finish of Parmesan | LOW |
 | BITES TO START | OPPĀNE (THE BREAD) | Made from sourdough, toscano, bread stick and mini pizzette served with olive oil and basil. | Made with sourdough, Toscano bread, breadsticks and mini pizzette, served with olive oil and basil. | MEDIUM |
-| BITES TO START | PIADINA E CREMA DI POMODORO | Slow roastedisle of wychy tomato hummus | Slow-roasted Isle of Wight tomato hummus | MEDIUM |
+| BITES TO START | PIADINA E CREMA DI POMODORO | Slow roasted isle of wight tomato hummus | Slow-roasted Isle of Wight tomato hummus | MEDIUM |
 | BITES TO START | PIADINA E CREMA DI POMODORO | home made fresh meat | homemade fresh bread | LOW |
-| BITES TO START | SFIZIO AL POMODORO | campana isle of wychy tomato | Campania, Isle of Wight tomato | MEDIUM |
+| BITES TO START | SFIZIO AL POMODORO | campana isle of wight tomato | Campania, Isle of Wight tomato | MEDIUM |
 | BITES TO START | TAGLIERE MISTO (A SHARING PLATTER FOR 2) | Description duplicates SFIZIO AL POMODORO. | Owner to confirm the intended sharing platter description. | LOW |
 | SOURDOUGH PIZZA & CALZONE | A BELLA FIGLIOLA | extra virgin oil | extra virgin olive oil | MEDIUM |
 | SOURDOUGH PIZZA & CALZONE | PIZZA E FANTASIA | Vegan cheese instead of mozzarella or as an extra topping £1.95 | Vegan cheese instead of mozzarella, or as an extra topping, £1.95. | MEDIUM |

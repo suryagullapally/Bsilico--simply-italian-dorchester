@@ -5,17 +5,18 @@ import java.util.Set;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 
 import com.basilico.backend.menu.entity.DietaryTag;
 import com.basilico.backend.menu.entity.ProductType;
 
 public record CreateMenuItemRequest(
 		@NotNull Long categoryId,
-		@NotBlank String slug,
-		@NotBlank String name,
-		String description,
+		@NotBlank @Size(max = 160) String slug,
+		@NotBlank @Size(max = 220) String name,
+		@Size(max = 2000) String description,
 		@NotNull @PositiveOrZero Integer pricePence,
-		String imagePath,
+		@Size(max = 500) String imagePath,
 		@NotNull ProductType productType,
 		@NotNull Boolean available,
 		@NotNull Boolean active,

@@ -8,7 +8,9 @@ import { routes } from "@/lib/routes";
 
 export const metadata: Metadata = {
   description: "Privacy information for the Basilico customer website.",
-  title: "Privacy | Basilico Dorchester",
+  title: {
+    absolute: "Privacy | Basilico Dorchester",
+  },
 };
 
 export default function PrivacyPage() {

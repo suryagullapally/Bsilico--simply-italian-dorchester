@@ -18,5 +18,9 @@ public interface MenuCustomizerRepository extends JpaRepository<MenuCustomizer, 
 	@EntityGraph(attributePaths = { "category", "toppings" })
 	Optional<MenuCustomizer> findBySlugAndActiveTrue(String slug);
 
+	@Override
+	@EntityGraph(attributePaths = { "category", "toppings" })
+	Optional<MenuCustomizer> findById(Long id);
+
 	long countBySlug(String slug);
 }

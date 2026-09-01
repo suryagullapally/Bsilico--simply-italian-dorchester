@@ -17,7 +17,9 @@ import type { CreateYourOwnConfiguration } from "@/types/menu";
 export const metadata: Metadata = {
   description:
     "Create your own Basilico sourdough pizza with extra toppings from the Basilico menu in Dorchester.",
-  title: "Create Your Own Pizza | Basilico Dorchester",
+  title: {
+    absolute: "Create Your Own Pizza | Basilico Dorchester",
+  },
 };
 
 export const dynamic = "force-dynamic";

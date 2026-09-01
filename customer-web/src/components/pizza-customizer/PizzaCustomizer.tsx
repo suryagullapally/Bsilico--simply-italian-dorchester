@@ -9,7 +9,10 @@ import { ToppingSelector } from "@/components/pizza-customizer/ToppingSelector";
 import { pizzaBaseVisual } from "@/data/pizza-visuals";
 import { formatGbpPennies } from "@/lib/format-price";
 import { getCreateYourOwnPricing } from "@/lib/pizza-pricing";
-import type { CreateYourOwnConfiguration } from "@/types/menu";
+import type {
+  CreateYourOwnConfiguration,
+  CreateYourOwnToppingOption,
+} from "@/types/menu";
 
 type PizzaCustomizerProps = {
   configuration: CreateYourOwnConfiguration;
@@ -18,25 +21,34 @@ type PizzaCustomizerProps = {
 export function PizzaCustomizer({ configuration }: PizzaCustomizerProps) {
   const { addCustomPizza } = useCart();
   const [added, setAdded] = useState(false);
-  const [selectedToppings, setSelectedToppings] = useState<string[]>([]);
+  const [selectedToppings, setSelectedToppings] = useState<
+    CreateYourOwnToppingOption[]
+  >([]);
 
   const pricing = useMemo(
     () => getCreateYourOwnPricing(configuration, selectedToppings.length),
     [configuration, selectedToppings.length],
   );
 
-  function toggleTopping(topping: string) {
+  function toggleTopping(topping: CreateYourOwnToppingOption) {
     setAdded(false);
     setSelectedToppings((currentToppings) =>
-      currentToppings.includes(topping)
-        ? currentToppings.filter((currentTopping) => currentTopping !== topping)
+      currentToppings.some((currentTopping) => currentTopping.id === topping.id)
+        ? currentToppings.filter(
+            (currentTopping) => currentTopping.id !== topping.id,
+          )
         : [...currentToppings, topping],
     );
   }
 
   function handleAddToOrder() {
+    if (!configuration.id) {
+      return;
+    }
+
     addCustomPizza({
       basePricePennies: pricing.basePricePennies,
+      customizerId: configuration.id,
       extrasPricePennies: pricing.extrasPricePennies,
       image: {
         alt: pizzaBaseVisual.alt,
@@ -74,13 +86,15 @@ export function PizzaCustomizer({ configuration }: PizzaCustomizerProps) {
         </header>
 
         <div className="pizza-customizer__visual">
-          <PizzaCanvas selectedToppings={selectedToppings} />
+          <PizzaCanvas
+            selectedToppings={selectedToppings.map((topping) => topping.name)}
+          />
         </div>
 
         <div className="pizza-customizer__selector">
           <ToppingSelector
             onToggleTopping={toggleTopping}
-            selectedToppings={selectedToppings}
+            selectedToppingIds={selectedToppings.map((topping) => topping.id)}
             toppingPricePennies={pricing.toppingPricePennies}
             toppings={configuration.toppings}
           />

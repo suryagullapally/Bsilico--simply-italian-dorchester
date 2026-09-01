@@ -1,5 +1,6 @@
 import type {
   CreateYourOwnConfiguration,
+  CreateYourOwnToppingOption,
   DietaryLegendItem,
   MenuCategory,
   MenuCategoryId,
@@ -15,10 +16,11 @@ type ReferenceMenuItem = Omit<MenuItem, "pricePence"> & {
 
 type ReferenceCreateYourOwnConfiguration = Omit<
   CreateYourOwnConfiguration,
-  "basePricePence" | "extraToppingPricePence"
+  "basePricePence" | "extraToppingPricePence" | "toppings"
 > & {
   basePrice: number;
   extraToppingPrice: number;
+  toppings: string[];
 };
 
 export const menuCategories: MenuCategory[] = [
@@ -98,7 +100,7 @@ const referenceMenuItems: ReferenceMenuItem[] = [
     available: true,
     category: "bites-to-start",
     description:
-      "Ide of wychy tomatoes, red onions and roasted garlic marinated in a special and delicious dressing, served on toasted sourdough, with a light and fresh base of parmesan.",
+      "Isle of wight tomatoes, red onions and roasted garlic marinated in a special and delicious dressing, served on toasted sourdough, with a light and fresh base of parmesan.",
     dietaryTags: ["V", "VE"],
     id: "bruschetta",
     name: "BRUSCHETTA",
@@ -146,7 +148,7 @@ const referenceMenuItems: ReferenceMenuItem[] = [
     available: true,
     category: "bites-to-start",
     description:
-      "Buffalo mozzarella from campana isle of wychy tomato, beef tomato with Trapani salt, Grana Padano, rocket, onions and extra basil.",
+      "Buffalo mozzarella from campana isle of wight tomato, beef tomato with Trapani salt, Grana Padano, rocket, onions and extra basil.",
     dietaryTags: ["V", "GF", "VE"],
     id: "sfizio-al-pomodoro",
     name: "SFIZIO AL POMODORO",
@@ -158,7 +160,7 @@ const referenceMenuItems: ReferenceMenuItem[] = [
     available: true,
     category: "bites-to-start",
     description:
-      "Buffalo mozzarella from campana isle of wychy tomato, beef tomato with trapani salt, grana padano, rocket, onions and extra basil.",
+      "Buffalo mozzarella from campana isle of wight tomato, beef tomato with trapani salt, grana padano, rocket, onions and extra basil.",
     dietaryTags: ["VE"],
     id: "tagliere-misto-sharing-platter-for-2",
     name: "TAGLIERE MISTO (A SHARING PLATTER FOR 2)",
@@ -523,7 +525,20 @@ export const createYourOwnBlock: CreateYourOwnConfiguration = {
   ...createYourOwnReferenceContent,
   basePricePence: priceToPennies(basePrice),
   extraToppingPricePence: priceToPennies(extraToppingPrice),
+  toppings: createYourOwnReferenceContent.toppings.map(toReferenceToppingOption),
 };
+
+function toReferenceToppingOption(
+  topping: string,
+  index: number,
+): CreateYourOwnToppingOption {
+  return {
+    available: true,
+    displayOrder: index + 1,
+    id: index + 1,
+    name: topping,
+  };
+}
 
 export function getMenuItemsByCategory(categoryId: MenuCategoryId) {
   return menuItems.filter((item) => item.category === categoryId);

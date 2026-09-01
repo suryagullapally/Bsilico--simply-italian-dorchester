@@ -20,6 +20,8 @@ import {
   createMenuCartLine,
   getCartItemCount,
   getCartSubtotalPennies,
+  getMenuCartLineId,
+  getMenuItemCartQuantity,
   parsePersistedCart,
   serializeCart,
 } from "@/lib/cart/cart-utils";
@@ -30,11 +32,13 @@ type CartContextValue = {
   addMenuItem: (item: MenuItem, quantity?: number) => void;
   clearCart: () => void;
   decrementLine: (lineId: string) => void;
+  getMenuItemQuantity: (item: MenuItem) => number;
   hydrated: boolean;
   incrementLine: (lineId: string) => void;
   itemCount: number;
   items: CartLine[];
   removeLine: (lineId: string) => void;
+  setMenuItemQuantity: (item: MenuItem, quantity: number) => void;
   subtotalPennies: number;
 };
 
@@ -86,6 +90,26 @@ export function CartProvider({ children }: CartProviderProps) {
     dispatch({ lineId, type: "decrement-line" });
   }, []);
 
+  const setMenuItemQuantity = useCallback((item: MenuItem, quantity: number) => {
+    if (!item.available && quantity > 0) {
+      return;
+    }
+
+    const lineId = getMenuCartLineId(item);
+
+    dispatch({
+      line: quantity > 0 ? createMenuCartLine({ item, quantity }) : undefined,
+      lineId,
+      quantity,
+      type: "set-line-quantity",
+    });
+  }, []);
+
+  const getMenuItemQuantity = useCallback(
+    (item: MenuItem) => getMenuItemCartQuantity(state.items, item),
+    [state.items],
+  );
+
   const removeLine = useCallback((lineId: string) => {
     dispatch({ lineId, type: "remove-line" });
   }, []);
@@ -100,11 +124,13 @@ export function CartProvider({ children }: CartProviderProps) {
       addMenuItem,
       clearCart,
       decrementLine,
+      getMenuItemQuantity,
       hydrated: state.hydrated,
       incrementLine,
       itemCount: getCartItemCount(state.items),
       items: state.items,
       removeLine,
+      setMenuItemQuantity,
       subtotalPennies: getCartSubtotalPennies(state.items),
     }),
     [
@@ -112,8 +138,10 @@ export function CartProvider({ children }: CartProviderProps) {
       addMenuItem,
       clearCart,
       decrementLine,
+      getMenuItemQuantity,
       incrementLine,
       removeLine,
+      setMenuItemQuantity,
       state.hydrated,
       state.items,
     ],

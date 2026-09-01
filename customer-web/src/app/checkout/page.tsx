@@ -8,7 +8,9 @@ import { Container } from "@/components/layout/Container";
 export const metadata: Metadata = {
   description:
     "Review your Basilico order details for delivery or collection before payment.",
-  title: "Checkout | Basilico Dorchester",
+  title: {
+    absolute: "Checkout | Basilico Dorchester",
+  },
 };
 
 export default function CheckoutPage() {

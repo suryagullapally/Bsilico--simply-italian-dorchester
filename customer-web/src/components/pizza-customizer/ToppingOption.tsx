@@ -1,23 +1,24 @@
 import { formatGbpPennies } from "@/lib/format-price";
+import type { CreateYourOwnToppingOption } from "@/types/menu";
 
 type ToppingOptionProps = {
-  name: string;
-  onToggle: (name: string) => void;
+  onToggle: (topping: CreateYourOwnToppingOption) => void;
   selected: boolean;
+  topping: CreateYourOwnToppingOption;
   toppingPricePennies: number;
 };
 
 export function ToppingOption({
-  name,
   onToggle,
   selected,
+  topping,
   toppingPricePennies,
 }: ToppingOptionProps) {
   const actionLabel = selected ? "Remove" : "Add";
 
   return (
     <button
-      aria-label={`${actionLabel} ${name}`}
+      aria-label={`${actionLabel} ${topping.name}`}
       aria-pressed={selected}
       className={[
         "topping-option",
@@ -25,10 +26,10 @@ export function ToppingOption({
       ]
         .filter(Boolean)
         .join(" ")}
-      onClick={() => onToggle(name)}
+      onClick={() => onToggle(topping)}
       type="button"
     >
-      <span className="topping-option__name">{name}</span>
+      <span className="topping-option__name">{topping.name}</span>
       <span className="topping-option__state">
         {selected ? "Selected" : `+ ${formatGbpPennies(toppingPricePennies)}`}
       </span>

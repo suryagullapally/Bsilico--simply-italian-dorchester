@@ -160,6 +160,7 @@ function mapMenuItem(item: BackendMenuItem): MenuItem {
 
   return {
     available: item.available,
+    backendId: item.id,
     category,
     customizable: item.customizable,
     description: item.description ?? undefined,
@@ -189,7 +190,12 @@ function mapCustomizer(
       (firstTopping, secondTopping) =>
         firstTopping.displayOrder - secondTopping.displayOrder,
     )
-    .map((topping) => topping.name);
+    .map((topping) => ({
+      available: topping.available,
+      displayOrder: topping.displayOrder,
+      id: topping.id,
+      name: topping.name,
+    }));
 
   return {
     basePricePence: customizer.basePricePence,
@@ -197,6 +203,7 @@ function mapCustomizer(
       customizer.extraToppingPricePence,
     )} EACH`,
     extraToppingPricePence: customizer.extraToppingPricePence,
+    id: customizer.id,
     pricingCopy: `FROM ${formatGbpPennies(
       customizer.basePricePence,
     )} + NO TOPPINGS`,

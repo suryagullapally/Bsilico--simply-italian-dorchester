@@ -29,6 +29,7 @@ export type MenuItemImage = {
 
 export type MenuItem = {
   available: boolean;
+  backendId?: number;
   category: MenuCategoryId;
   customizable?: boolean;
   description?: string;
@@ -52,10 +53,18 @@ export type CreateYourOwnConfiguration = {
   basePricePence: number;
   extraToppingCopy: string;
   extraToppingPricePence: number;
+  id?: number;
   pricingCopy: string;
   slug?: string;
   title: string;
-  toppings: string[];
+  toppings: CreateYourOwnToppingOption[];
+};
+
+export type CreateYourOwnToppingOption = {
+  available: boolean;
+  displayOrder: number;
+  id: number;
+  name: string;
 };
 
 export type MenuData = {

@@ -6,6 +6,11 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useCart } from "@/components/cart/CartProvider";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import {
+  getDeliveryQuote,
+  getFulfilmentOptions,
+} from "@/lib/api/fulfilment-api";
+import { createOrder } from "@/lib/api/order-api";
+import {
   CHECKOUT_STORAGE_KEY,
   type CheckoutErrors,
   type CheckoutFieldName,
@@ -29,9 +34,52 @@ import {
   serializeCheckoutDraft,
   validateCheckout,
 } from "@/lib/checkout/checkout-utils";
+import {
+  buildCreateOrderRequest,
+  CheckoutOrderRequestError,
+} from "@/lib/checkout/order-request";
 import { formatGbpPennies } from "@/lib/format-price";
+import { getApiErrorMessage } from "@/lib/api/api-error";
 import { routes } from "@/lib/routes";
 import type { CartLine } from "@/lib/cart/cart-types";
+import type {
+  BackendDeliveryQuoteResponse,
+  BackendFulfilmentOptionsResponse,
+} from "@/types/backend-fulfilment";
+import type { BackendOrderResponse } from "@/types/backend-order";
+
+type OrderSubmissionState =
+  | { status: "idle" }
+  | { status: "submitting" }
+  | { message: string; status: "error" }
+  | { message: string; order: BackendOrderResponse; status: "price-changed" };
+
+type FulfilmentOptionsState =
+  | { status: "loading" }
+  | { message: string; status: "error" }
+  | { options: BackendFulfilmentOptionsResponse; status: "ready" };
+
+type DeliveryCheckState =
+  | { status: "idle" }
+  | { status: "checking" }
+  | {
+      message: string;
+      normalizedPostcode: string | null;
+      quote: BackendDeliveryQuoteResponse;
+      status: "eligible";
+    }
+  | {
+      message: string;
+      normalizedPostcode: string | null;
+      quote: BackendDeliveryQuoteResponse;
+      status: "ineligible";
+    }
+  | { message: string; status: "error" };
+
+type CompletedDeliveryCheckState = Extract<
+  DeliveryCheckState,
+  { status: "eligible" | "ineligible" }
+>;
 
 export function CheckoutPageContent() {
   const router = useRouter();
@@ -40,8 +88,33 @@ export function CheckoutPageContent() {
     useState<CheckoutState>(initialCheckoutState);
   const [errors, setErrors] = useState<CheckoutErrors>({});
   const [draftHydrated, setDraftHydrated] = useState(false);
+  const [submission, setSubmission] = useState<OrderSubmissionState>({
+    status: "idle",
+  });
+  const [fulfilmentState, setFulfilmentState] =
+    useState<FulfilmentOptionsState>({ status: "loading" });
+  const [deliveryCheck, setDeliveryCheck] = useState<DeliveryCheckState>({
+    status: "idle",
+  });
   const scheduledDateOptions = useMemo(() => getScheduledDateOptions(), []);
   const scheduledTimeOptions = useMemo(() => getScheduledTimeOptions(), []);
+  const fulfilmentOptions =
+    fulfilmentState.status === "ready" ? fulfilmentState.options : null;
+  const onlineOrderingAvailable = Boolean(
+    fulfilmentOptions?.collectionEnabled || fulfilmentOptions?.deliveryEnabled,
+  );
+  const estimatedDeliveryFeePence = useMemo(
+    () =>
+      getEstimatedDeliveryFeePence(
+        checkoutState.fulfilmentType,
+        deliveryCheck,
+      ),
+    [checkoutState.fulfilmentType, deliveryCheck],
+  );
+  const estimatedTotalPence =
+    estimatedDeliveryFeePence === null
+      ? null
+      : subtotalPennies + estimatedDeliveryFeePence;
 
   useEffect(() => {
     const hydrationId = window.setTimeout(() => {
@@ -53,6 +126,32 @@ export function CheckoutPageContent() {
   }, []);
 
   useEffect(() => {
+    let mounted = true;
+
+    getFulfilmentOptions()
+      .then((options) => {
+        if (mounted) {
+          setFulfilmentState({ options, status: "ready" });
+        }
+      })
+      .catch((error) => {
+        if (mounted) {
+          setFulfilmentState({
+            message: getApiErrorMessage(
+              error,
+              "We’re having trouble loading ordering options right now. Please call Basilico on 07424 642900.",
+            ),
+            status: "error",
+          });
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!draftHydrated) {
       return;
     }
@@ -60,7 +159,56 @@ export function CheckoutPageContent() {
     writeCheckoutDraft(checkoutState);
   }, [checkoutState, draftHydrated]);
 
+  useEffect(() => {
+    if (!draftHydrated || !fulfilmentOptions) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setCheckoutState((currentState) => {
+        if (isFulfilmentEnabled(currentState.fulfilmentType, fulfilmentOptions)) {
+          return currentState;
+        }
+
+        const availableFulfilmentType =
+          getSingleAvailableFulfilmentType(fulfilmentOptions);
+
+        if (currentState.fulfilmentType === availableFulfilmentType) {
+          return currentState;
+        }
+
+        return {
+          ...currentState,
+          fulfilmentType: availableFulfilmentType,
+        };
+      });
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [draftHydrated, fulfilmentOptions]);
+
   function updateFulfilmentType(fulfilmentType: FulfilmentType) {
+    if (!fulfilmentOptions) {
+      setErrors((currentErrors) => ({
+        ...currentErrors,
+        fulfilmentType: "Ordering options are still loading.",
+      }));
+      return;
+    }
+
+    if (!isFulfilmentEnabled(fulfilmentType, fulfilmentOptions)) {
+      setErrors((currentErrors) => ({
+        ...currentErrors,
+        fulfilmentType:
+          fulfilmentType === "delivery"
+            ? "Delivery is currently unavailable."
+            : "Collection is currently unavailable.",
+      }));
+      return;
+    }
+
+    resetSubmission();
+    setDeliveryCheck({ status: "idle" });
     setCheckoutState((currentState) => ({
       ...currentState,
       fulfilmentType,
@@ -72,6 +220,7 @@ export function CheckoutPageContent() {
     fieldName: keyof CheckoutState["customer"],
     value: string,
   ) {
+    resetSubmission();
     setCheckoutState((currentState) => ({
       ...currentState,
       customer: {
@@ -83,6 +232,7 @@ export function CheckoutPageContent() {
   }
 
   function updateAddressField(fieldName: keyof DeliveryAddress, value: string) {
+    resetSubmission();
     const normalizedValue =
       fieldName === "postcode" ? value.toUpperCase() : value;
 
@@ -103,11 +253,13 @@ export function CheckoutPageContent() {
     }
 
     if (fieldName === "postcode") {
+      setDeliveryCheck({ status: "idle" });
       clearError("addressPostcode");
     }
   }
 
   function updateTimingType(type: TimingType) {
+    resetSubmission();
     setCheckoutState((currentState) => ({
       ...currentState,
       timing: {
@@ -122,6 +274,7 @@ export function CheckoutPageContent() {
     fieldName: "requestedDate" | "requestedTime",
     value: string,
   ) {
+    resetSubmission();
     setCheckoutState((currentState) => ({
       ...currentState,
       timing: {
@@ -135,17 +288,101 @@ export function CheckoutPageContent() {
   }
 
   function updateNotes(value: string) {
+    resetSubmission();
     setCheckoutState((currentState) => ({
       ...currentState,
       notes: value,
     }));
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function verifyDeliveryPostcode(
+    postcode: string,
+  ): Promise<DeliveryCheckState> {
+    const normalizedPostcode = normalizePostcode(postcode);
+
+    if (!normalizedPostcode) {
+      const nextState: DeliveryCheckState = {
+        message: "Enter your postcode.",
+        status: "error",
+      };
+      setDeliveryCheck(nextState);
+      return nextState;
+    }
+
+    setDeliveryCheck({ status: "checking" });
+
+    try {
+      const result = await getDeliveryQuote({
+        postcode: normalizedPostcode,
+      });
+      const nextState = toDeliveryCheckState(result);
+      const checkedPostcode = result.normalizedPostcode ?? normalizedPostcode;
+
+      setDeliveryCheck(nextState);
+      setCheckoutState((currentState) => ({
+        ...currentState,
+        deliveryAddress: {
+          ...currentState.deliveryAddress,
+          postcode: checkedPostcode,
+        },
+      }));
+
+      if (nextState.status === "eligible") {
+        clearError("addressPostcode");
+      } else {
+        setErrors((currentErrors) => ({
+          ...currentErrors,
+          addressPostcode: nextState.message,
+        }));
+      }
+
+      return nextState;
+    } catch (error) {
+      const nextState: DeliveryCheckState = {
+        message: getApiErrorMessage(
+          error,
+          "We could not check delivery for this postcode right now.",
+        ),
+        status: "error",
+      };
+      setDeliveryCheck(nextState);
+      setErrors((currentErrors) => ({
+        ...currentErrors,
+        addressPostcode: nextState.message,
+      }));
+      return nextState;
+    }
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (submission.status === "submitting") {
+      return;
+    }
+
+    if (submission.status === "price-changed") {
+      router.push(paymentRoute(submission.order.orderReference));
+      return;
+    }
 
     const normalizedState = normalizeCheckoutState(checkoutState);
     const nextErrors = validateCheckout(normalizedState);
+
+    if (fulfilmentState.status === "loading") {
+      nextErrors.fulfilmentType = "Ordering options are still loading.";
+    } else if (fulfilmentState.status === "error") {
+      nextErrors.fulfilmentType = fulfilmentState.message;
+    } else if (!onlineOrderingAvailable) {
+      nextErrors.fulfilmentType = "Online ordering is temporarily unavailable.";
+    } else if (
+      !isFulfilmentEnabled(normalizedState.fulfilmentType, fulfilmentState.options)
+    ) {
+      nextErrors.fulfilmentType =
+        normalizedState.fulfilmentType === "delivery"
+          ? "Delivery is currently unavailable."
+          : "Collection is currently unavailable.";
+    }
 
     setCheckoutState(normalizedState);
     setErrors(nextErrors);
@@ -155,8 +392,60 @@ export function CheckoutPageContent() {
       return;
     }
 
+    if (normalizedState.fulfilmentType === "delivery") {
+      const deliveryCheckResult = await verifyDeliveryPostcode(
+        normalizedState.deliveryAddress.postcode,
+      );
+
+      if (deliveryCheckResult.status !== "eligible") {
+        focusFirstInvalidField({
+          addressPostcode: getDeliveryCheckMessage(deliveryCheckResult),
+        });
+        return;
+      }
+    }
+
     writeCheckoutDraft(normalizedState);
-    router.push("/checkout/payment");
+    setSubmission({ status: "submitting" });
+
+    try {
+      const order = await createOrder(
+        buildCreateOrderRequest(normalizedState, items),
+      );
+
+      if (
+        order.subtotalPence !== subtotalPennies ||
+        estimatedTotalPence === null ||
+        order.totalPence !== estimatedTotalPence
+      ) {
+        setSubmission({
+          message:
+            "The order total has changed since this was reviewed. Please check the updated total before continuing to payment.",
+          order,
+          status: "price-changed",
+        });
+        return;
+      }
+
+      router.push(paymentRoute(order.orderReference));
+    } catch (error) {
+      setSubmission({
+        message:
+          error instanceof CheckoutOrderRequestError
+            ? error.message
+            : getApiErrorMessage(
+                error,
+                "We couldn’t create your order right now. Please try again.",
+              ),
+        status: "error",
+      });
+    }
+  }
+
+  function resetSubmission() {
+    setSubmission((currentSubmission) =>
+      currentSubmission.status === "idle" ? currentSubmission : { status: "idle" },
+    );
   }
 
   function clearError(fieldName: CheckoutFieldName) {
@@ -234,28 +523,37 @@ export function CheckoutPageContent() {
               <legend className="sr-only">Choose delivery or collection</legend>
               <button
                 aria-pressed={checkoutState.fulfilmentType === "delivery"}
+                disabled={!fulfilmentOptions?.deliveryEnabled}
                 className={getChoiceClassName(
                   checkoutState.fulfilmentType === "delivery",
+                  Boolean(!fulfilmentOptions || !fulfilmentOptions.deliveryEnabled),
                 )}
                 onClick={() => updateFulfilmentType("delivery")}
                 type="button"
               >
                 <span>DELIVERY</span>
                 <span>
-                  Delivery availability and any applicable delivery charge will
-                  be confirmed before payment.
+                  {fulfilmentOptions?.deliveryEnabled
+                    ? "Delivery is checked from the address postcode you enter below."
+                    : "Delivery is currently unavailable."}
                 </span>
               </button>
               <button
                 aria-pressed={checkoutState.fulfilmentType === "collection"}
+                disabled={!fulfilmentOptions?.collectionEnabled}
                 className={getChoiceClassName(
                   checkoutState.fulfilmentType === "collection",
+                  Boolean(!fulfilmentOptions || !fulfilmentOptions.collectionEnabled),
                 )}
                 onClick={() => updateFulfilmentType("collection")}
                 type="button"
               >
                 <span>COLLECTION</span>
-                <span>Collection from Basilico on Trinity Street.</span>
+                <span>
+                  {fulfilmentOptions?.collectionEnabled
+                    ? "Collection from Basilico on Trinity Street."
+                    : "Collection is currently unavailable."}
+                </span>
               </button>
             </fieldset>
             <FieldError id="fulfilment-error" message={errors.fulfilmentType} />
@@ -313,17 +611,19 @@ export function CheckoutPageContent() {
                     fieldName="addressPostcode"
                     id="delivery-postcode"
                     label="Postcode"
-                    onBlur={() =>
-                      updateAddressField(
-                        "postcode",
-                        normalizePostcode(checkoutState.deliveryAddress.postcode),
-                      )
-                    }
+                    onBlur={() => {
+                      const normalizedPostcode = normalizePostcode(
+                        checkoutState.deliveryAddress.postcode,
+                      );
+                      updateAddressField("postcode", normalizedPostcode);
+                      void verifyDeliveryPostcode(normalizedPostcode);
+                    }}
                     onChange={(value) => updateAddressField("postcode", value)}
                     required
                     value={checkoutState.deliveryAddress.postcode}
                   />
                 </div>
+                <DeliveryCheckMessage deliveryCheck={deliveryCheck} />
               </div>
             ) : null}
           </section>
@@ -496,8 +796,14 @@ export function CheckoutPageContent() {
 
         <CheckoutReview
           checkoutState={checkoutState}
+          deliveryCheck={deliveryCheck}
+          estimatedDeliveryFeePence={estimatedDeliveryFeePence}
+          estimatedTotalPence={estimatedTotalPence}
+          fulfilmentState={fulfilmentState}
           itemCount={itemCount}
           items={items}
+          onlineOrderingAvailable={onlineOrderingAvailable}
+          submission={submission}
           subtotalPennies={subtotalPennies}
         />
       </form>
@@ -573,15 +879,27 @@ function FieldError({ id, message }: FieldErrorProps) {
 
 type CheckoutReviewProps = {
   checkoutState: CheckoutState;
+  deliveryCheck: DeliveryCheckState;
+  estimatedDeliveryFeePence: number | null;
+  estimatedTotalPence: number | null;
+  fulfilmentState: FulfilmentOptionsState;
   itemCount: number;
   items: CartLine[];
+  onlineOrderingAvailable: boolean;
+  submission: OrderSubmissionState;
   subtotalPennies: number;
 };
 
 function CheckoutReview({
   checkoutState,
+  deliveryCheck,
+  estimatedDeliveryFeePence,
+  estimatedTotalPence,
+  fulfilmentState,
   itemCount,
   items,
+  onlineOrderingAvailable,
+  submission,
   subtotalPennies,
 }: CheckoutReviewProps) {
   const fullName = [checkoutState.customer.firstName, checkoutState.customer.lastName]
@@ -650,14 +968,103 @@ function CheckoutReview({
           <dd>{itemCount}</dd>
         </div>
         <div>
-          <dt>Subtotal</dt>
+          <dt>Food subtotal</dt>
           <dd>{formatGbpPennies(subtotalPennies)}</dd>
         </div>
+        <div>
+          <dt>{checkoutState.fulfilmentType === "delivery" ? "Delivery" : "Collection"}</dt>
+          <dd>
+            {getFulfilmentChargeLabel(
+              checkoutState.fulfilmentType,
+              estimatedDeliveryFeePence,
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt>Total</dt>
+          <dd>
+            {estimatedTotalPence === null
+              ? "To be confirmed"
+              : formatGbpPennies(estimatedTotalPence)}
+          </dd>
+        </div>
+        {checkoutState.fulfilmentType === "delivery" &&
+        deliveryCheck.status === "eligible" &&
+        deliveryCheck.quote.estimatedDeliveryMinutes !== null ? (
+          <div>
+            <dt>Estimated delivery</dt>
+            <dd>Approx. {deliveryCheck.quote.estimatedDeliveryMinutes} mins</dd>
+          </div>
+        ) : null}
       </dl>
 
-      {checkoutState.fulfilmentType === "delivery" ? (
+      {fulfilmentState.status === "loading" ? (
         <p className="type-small checkout-review__notice">
-          {checkoutGuidance.delivery}
+          Checking delivery and collection options.
+        </p>
+      ) : null}
+
+      {fulfilmentState.status === "error" ? (
+        <p
+          className="type-small checkout-submit-message checkout-submit-message--error"
+          role="alert"
+        >
+          {fulfilmentState.message}
+        </p>
+      ) : null}
+
+      {fulfilmentState.status === "ready" && !onlineOrderingAvailable ? (
+        <p
+          className="type-small checkout-submit-message checkout-submit-message--error"
+          role="alert"
+        >
+          Online ordering is temporarily unavailable.
+        </p>
+      ) : null}
+
+      {checkoutState.fulfilmentType === "delivery" ? (
+        <>
+          <p className="type-small checkout-review__notice">
+            {checkoutGuidance.delivery}
+          </p>
+          <DeliveryCheckMessage deliveryCheck={deliveryCheck} />
+        </>
+      ) : null}
+
+      {submission.status === "price-changed" ? (
+        <div className="checkout-submit-message checkout-submit-message--notice" role="status">
+          <p className="type-small">{submission.message}</p>
+          <dl>
+            <div>
+              <dt>Food subtotal</dt>
+              <dd>{formatGbpPennies(submission.order.subtotalPence)}</dd>
+            </div>
+            <div>
+              <dt>Delivery</dt>
+              <dd>
+                {submission.order.deliveryFeePence === 0
+                  ? "Free"
+                  : formatGbpPennies(submission.order.deliveryFeePence)}
+              </dd>
+            </div>
+            <div>
+              <dt>Updated total</dt>
+              <dd>{formatGbpPennies(submission.order.totalPence)}</dd>
+            </div>
+            <div>
+              <dt>Order reference</dt>
+              <dd>{submission.order.orderReference}</dd>
+            </div>
+          </dl>
+        </div>
+      ) : null}
+
+      {submission.status === "error" ? (
+        <p
+          className="type-small checkout-submit-message checkout-submit-message--error"
+          role="alert"
+        >
+          {submission.message}
         </p>
       ) : null}
 
@@ -671,11 +1078,97 @@ function CheckoutReview({
         </p>
       </section>
 
-      <Button className="checkout-review__button" type="submit">
-        CONTINUE TO PAYMENT
+      <Button
+        aria-busy={submission.status === "submitting"}
+        className="checkout-review__button"
+        disabled={isSubmitDisabled(
+          submission,
+          fulfilmentState,
+          onlineOrderingAvailable,
+        )}
+        type="submit"
+      >
+        {getSubmitButtonLabel(submission, fulfilmentState, onlineOrderingAvailable)}
       </Button>
     </aside>
   );
+}
+
+function DeliveryCheckMessage({
+  deliveryCheck,
+}: {
+  deliveryCheck: DeliveryCheckState;
+}) {
+  if (deliveryCheck.status === "idle") {
+    return null;
+  }
+
+  if (deliveryCheck.status === "checking") {
+    return (
+      <p className="type-small checkout-delivery-status" role="status">
+        Checking delivery for this postcode.
+      </p>
+    );
+  }
+
+  const quoteDetails =
+    deliveryCheck.status === "eligible"
+      ? formatDeliveryQuoteDetails(deliveryCheck.quote)
+      : null;
+
+  return (
+    <p
+      className={`type-small checkout-delivery-status checkout-delivery-status--${deliveryCheck.status}`}
+      role={deliveryCheck.status === "eligible" ? "status" : "alert"}
+    >
+      {deliveryCheck.message}
+      {quoteDetails ? <span>{quoteDetails}</span> : null}
+    </p>
+  );
+}
+
+function getSubmitButtonLabel(
+  submission: OrderSubmissionState,
+  fulfilmentState: FulfilmentOptionsState,
+  onlineOrderingAvailable: boolean,
+) {
+  if (submission.status === "submitting") {
+    return "CREATING ORDER...";
+  }
+
+  if (submission.status === "price-changed") {
+    return "CONTINUE WITH UPDATED TOTAL";
+  }
+
+  if (fulfilmentState.status === "loading") {
+    return "CHECKING OPTIONS...";
+  }
+
+  if (fulfilmentState.status === "error" || !onlineOrderingAvailable) {
+    return "ORDERING UNAVAILABLE";
+  }
+
+  return "CONTINUE TO PAYMENT";
+}
+
+function isSubmitDisabled(
+  submission: OrderSubmissionState,
+  fulfilmentState: FulfilmentOptionsState,
+  onlineOrderingAvailable: boolean,
+) {
+  if (submission.status === "price-changed") {
+    return false;
+  }
+
+  return (
+    submission.status === "submitting" ||
+    fulfilmentState.status !== "ready" ||
+    !onlineOrderingAvailable
+  );
+}
+
+function paymentRoute(orderReference: string) {
+  return `${routes.checkoutPayment}?order=${encodeURIComponent(orderReference)}`;
 }
 
 function ReviewRow({ label, value }: { label: string; value: string }) {
@@ -687,8 +1180,12 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function getChoiceClassName(selected: boolean) {
-  return ["checkout-choice", selected ? "checkout-choice--selected" : undefined]
+function getChoiceClassName(selected: boolean, disabled = false) {
+  return [
+    "checkout-choice",
+    selected ? "checkout-choice--selected" : undefined,
+    disabled ? "checkout-choice--disabled" : undefined,
+  ]
     .filter(Boolean)
     .join(" ");
 }
@@ -714,6 +1211,123 @@ function formatDeliveryAddress(address: DeliveryAddress) {
   ].filter(Boolean);
 
   return lines.length > 0 ? lines.join(", ") : "Not entered";
+}
+
+function toDeliveryCheckState(
+  response: BackendDeliveryQuoteResponse,
+): CompletedDeliveryCheckState {
+  const message =
+    response.message ??
+    (response.eligible
+      ? "Delivery available for this address."
+      : "Sorry, we currently deliver within 6 miles of Basilico.");
+
+  if (response.eligible) {
+    return {
+      message,
+      normalizedPostcode: response.normalizedPostcode,
+      quote: response,
+      status: "eligible",
+    };
+  }
+
+  return {
+    message,
+    normalizedPostcode: response.normalizedPostcode,
+    quote: response,
+    status: "ineligible",
+  };
+}
+
+function isFulfilmentEnabled(
+  fulfilmentType: CheckoutState["fulfilmentType"],
+  options: BackendFulfilmentOptionsResponse,
+) {
+  if (fulfilmentType === "collection") {
+    return options.collectionEnabled;
+  }
+
+  if (fulfilmentType === "delivery") {
+    return options.deliveryEnabled;
+  }
+
+  return false;
+}
+
+function getSingleAvailableFulfilmentType(
+  options: BackendFulfilmentOptionsResponse,
+): CheckoutState["fulfilmentType"] {
+  if (options.collectionEnabled && !options.deliveryEnabled) {
+    return "collection";
+  }
+
+  if (options.deliveryEnabled && !options.collectionEnabled) {
+    return "delivery";
+  }
+
+  return "";
+}
+
+function getEstimatedDeliveryFeePence(
+  fulfilmentType: CheckoutState["fulfilmentType"],
+  deliveryCheck: DeliveryCheckState,
+) {
+  if (!fulfilmentType) {
+    return null;
+  }
+
+  if (fulfilmentType === "collection") {
+    return 0;
+  }
+
+  return deliveryCheck.status === "eligible"
+    ? deliveryCheck.quote.deliveryFeePence
+    : null;
+}
+
+function getFulfilmentChargeLabel(
+  fulfilmentType: CheckoutState["fulfilmentType"],
+  deliveryFeePence: number | null,
+) {
+  if (fulfilmentType === "collection") {
+    return "Free";
+  }
+
+  if (fulfilmentType === "delivery") {
+    if (deliveryFeePence === null) {
+      return "To be confirmed";
+    }
+
+    return deliveryFeePence === 0 ? "FREE" : formatGbpPennies(deliveryFeePence);
+  }
+
+  return "Choose option";
+}
+
+function getDeliveryCheckMessage(deliveryCheck: DeliveryCheckState) {
+  if (deliveryCheck.status === "idle" || deliveryCheck.status === "checking") {
+    return "Check your delivery postcode.";
+  }
+
+  return deliveryCheck.message;
+}
+
+function formatDeliveryQuoteDetails(quote: BackendDeliveryQuoteResponse) {
+  const details: string[] = [];
+
+  if (quote.distanceMiles !== null) {
+    details.push(`${quote.distanceMiles.toFixed(1)} miles from Basilico`);
+  }
+
+  if (quote.deliveryFeePence !== null) {
+    details.push(`${formatGbpPennies(quote.deliveryFeePence)} delivery`);
+  }
+
+  if (quote.estimatedDeliveryMinutes !== null) {
+    details.push(`Approx. ${quote.estimatedDeliveryMinutes} mins`);
+  }
+
+  return details.length > 0 ? details.join(" · ") : null;
 }
 
 function focusFirstInvalidField(errors: CheckoutErrors) {

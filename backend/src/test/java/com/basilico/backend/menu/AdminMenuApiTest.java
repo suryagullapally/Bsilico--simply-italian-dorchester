@@ -5,6 +5,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +39,8 @@ class AdminMenuApiTest {
 		Long categoryId = categoryId("specials");
 
 		mockMvc.perform(post("/api/admin/menu/items")
+						.with(adminUser())
+						.with(csrf())
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{
@@ -64,6 +68,8 @@ class AdminMenuApiTest {
 		Long categoryId = categoryId("specials");
 
 		mockMvc.perform(post("/api/admin/menu/items")
+						.with(adminUser())
+						.with(csrf())
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{
@@ -91,6 +97,8 @@ class AdminMenuApiTest {
 		MenuItem item = item("lasagna");
 
 		mockMvc.perform(put("/api/admin/menu/items/{id}", item.getId())
+						.with(adminUser())
+						.with(csrf())
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(updatePayload(item, 1234)))
 				.andExpect(status().isOk())
@@ -103,6 +111,8 @@ class AdminMenuApiTest {
 		MenuItem item = item("lasagna");
 
 		mockMvc.perform(patch("/api/admin/menu/items/{id}/availability", item.getId())
+						.with(adminUser())
+						.with(csrf())
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{
@@ -118,6 +128,8 @@ class AdminMenuApiTest {
 		MenuItem item = item("lasagna");
 
 		mockMvc.perform(patch("/api/admin/menu/items/{id}/active", item.getId())
+						.with(adminUser())
+						.with(csrf())
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{
@@ -133,6 +145,8 @@ class AdminMenuApiTest {
 		MenuItem item = item("parmigiana-di-melanzane");
 
 		mockMvc.perform(patch("/api/admin/menu/items/{id}/featured", item.getId())
+						.with(adminUser())
+						.with(csrf())
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{
@@ -177,5 +191,9 @@ class AdminMenuApiTest {
 	private MenuItem item(String slug) {
 		return itemRepository.findBySlug(slug)
 				.orElseThrow();
+	}
+
+	private org.springframework.test.web.servlet.request.RequestPostProcessor adminUser() {
+		return user("owner@basilico.test").roles("OWNER");
 	}
 }

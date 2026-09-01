@@ -8,10 +8,13 @@ import {
   useState,
 } from "react";
 import { Button } from "@/components/ui/Button";
+import { createBooking } from "@/lib/api/booking-api";
+import { getApiErrorMessage } from "@/lib/api/api-error";
 import type {
   BookingErrors,
   BookingState,
 } from "@/lib/booking/booking-types";
+import { buildCreateBookingRequest } from "@/lib/booking/booking-request";
 import {
   basilicoBookingDetails,
   formatBookingDateLabel,
@@ -25,11 +28,20 @@ import {
   validateBooking,
 } from "@/lib/booking/booking-utils";
 import { routes } from "@/lib/routes";
+import type { BackendBookingResponse } from "@/types/backend-booking";
+
+type BookingSubmissionState =
+  | { status: "idle" }
+  | { status: "submitting" }
+  | { message: string; status: "error" }
+  | { booking: BackendBookingResponse; status: "success" };
 
 export function BookingPageContent() {
   const [booking, setBooking] = useState<BookingState>(initialBookingState);
   const [errors, setErrors] = useState<BookingErrors>({});
-  const [submitted, setSubmitted] = useState(false);
+  const [submission, setSubmission] = useState<BookingSubmissionState>({
+    status: "idle",
+  });
   const today = useMemo(() => getTodayDateValue(), []);
   const timeOptions = useMemo(() => getBookingTimeOptions(), []);
   const liveDateError = booking.date ? getBookingDateError(booking.date) : "";
@@ -43,7 +55,7 @@ export function BookingPageContent() {
 
   function commitBookingState(nextBooking: BookingState) {
     setBooking(nextBooking);
-    setSubmitted(false);
+    resetSubmission();
 
     if (hasBookingErrors(errors)) {
       setErrors(validateBooking(nextBooking));
@@ -82,22 +94,50 @@ export function BookingPageContent() {
     });
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (submission.status === "submitting") {
+      return;
+    }
 
     const normalizedBooking = normalizeBookingState(booking);
     const nextErrors = validateBooking(normalizedBooking);
 
     if (hasBookingErrors(nextErrors)) {
       setErrors(nextErrors);
-      setSubmitted(false);
+      setSubmission({ status: "idle" });
       focusFirstInvalidField(nextErrors);
       return;
     }
 
     setBooking(normalizedBooking);
     setErrors({});
-    setSubmitted(true);
+    setSubmission({ status: "submitting" });
+
+    try {
+      const response = await createBooking(
+        buildCreateBookingRequest(normalizedBooking),
+      );
+      setSubmission({
+        booking: response,
+        status: "success",
+      });
+    } catch (error) {
+      setSubmission({
+        message: getApiErrorMessage(
+          error,
+          "We couldn’t send your booking request right now. Please try again.",
+        ),
+        status: "error",
+      });
+    }
+  }
+
+  function resetSubmission() {
+    setSubmission((currentSubmission) =>
+      currentSubmission.status === "idle" ? currentSubmission : { status: "idle" },
+    );
   }
 
   return (
@@ -366,18 +406,60 @@ export function BookingPageContent() {
           </dl>
 
           <div className="booking-form__actions">
-            <Button className="booking-form__button" type="submit">
-              SEND BOOKING REQUEST
+            <Button
+              aria-busy={submission.status === "submitting"}
+              className="booking-form__button"
+              disabled={submission.status === "submitting"}
+              type="submit"
+            >
+              {submission.status === "submitting"
+                ? "SENDING REQUEST..."
+                : "SEND BOOKING REQUEST"}
             </Button>
 
-            {submitted ? (
-              <p className="type-small booking-confirmation" aria-live="polite">
-                Booking request ready. Online booking submission will be connected
-                when the reservation service is enabled. For now, call{" "}
-                <a href={basilicoBookingDetails.phoneHref}>
-                  {basilicoBookingDetails.phone}
-                </a>
-                .
+            {submission.status === "success" ? (
+              <div className="booking-confirmation" aria-live="polite" role="status">
+                <p className="type-eyebrow booking-confirmation__eyebrow">
+                  Booking request received.
+                </p>
+                <dl className="booking-confirmation__details">
+                  <div>
+                    <dt>Reference</dt>
+                    <dd>{submission.booking.bookingReference}</dd>
+                  </div>
+                  <div>
+                    <dt>Date</dt>
+                    <dd>{formatBookingDateLabel(submission.booking.date)}</dd>
+                  </div>
+                  <div>
+                    <dt>Time</dt>
+                    <dd>{formatBookingTime(submission.booking.time)}</dd>
+                  </div>
+                  <div>
+                    <dt>Party size</dt>
+                    <dd>
+                      {submission.booking.partySize}{" "}
+                      {submission.booking.partySize === 1 ? "guest" : "guests"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Status</dt>
+                    <dd>Requested</dd>
+                  </div>
+                </dl>
+                <p className="type-small">
+                  We’ll confirm your table separately. For anything urgent, call{" "}
+                  <a href={basilicoBookingDetails.phoneHref}>
+                    {basilicoBookingDetails.phone}
+                  </a>
+                  .
+                </p>
+              </div>
+            ) : null}
+
+            {submission.status === "error" ? (
+              <p className="type-small booking-form__error" role="alert">
+                {submission.message}
               </p>
             ) : null}
           </div>
@@ -385,6 +467,10 @@ export function BookingPageContent() {
       </form>
     </div>
   );
+}
+
+function formatBookingTime(time: string) {
+  return time.slice(0, 5);
 }
 
 function focusFirstInvalidField(errors: BookingErrors) {

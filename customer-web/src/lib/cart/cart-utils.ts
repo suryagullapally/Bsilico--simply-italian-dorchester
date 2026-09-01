@@ -6,7 +6,12 @@ import {
   type CartLine,
   type PersistedCart,
 } from "@/lib/cart/cart-types";
-import type { DietaryTag, MenuProductType } from "@/types/menu";
+import type {
+  CreateYourOwnToppingOption,
+  DietaryTag,
+  MenuItem,
+  MenuProductType,
+} from "@/types/menu";
 
 const allowedDietaryTags = new Set<DietaryTag>(["GF", "V", "VE"]);
 const allowedProductTypes = new Set<MenuProductType>([
@@ -38,11 +43,14 @@ export function getCartSubtotalPennies(items: readonly CartLine[]) {
 }
 
 export function createMenuCartLine({ item, quantity = 1 }: AddMenuItemInput) {
+  const menuItemId = item.backendId ?? parsePositiveInteger(item.id);
+
   return {
     dietaryTags: item.dietaryTags,
     id: `menu:${item.id}`,
     image: item.image,
     lineType: "menu-item",
+    menuItemId,
     name: item.name,
     productId: item.id,
     productSlug: item.slug,
@@ -52,19 +60,43 @@ export function createMenuCartLine({ item, quantity = 1 }: AddMenuItemInput) {
   } satisfies CartLine;
 }
 
+export function getMenuCartLineId(item: Pick<MenuItem, "id">) {
+  return `menu:${item.id}`;
+}
+
+export function getMenuItemCartQuantity(
+  items: readonly CartLine[],
+  item: Pick<MenuItem, "backendId" | "id">,
+) {
+  const menuItemLineId = getMenuCartLineId(item);
+
+  return items
+    .filter(
+      (line) =>
+        line.lineType === "menu-item" &&
+        (line.id === menuItemLineId ||
+          (item.backendId !== undefined && line.menuItemId === item.backendId)),
+    )
+    .reduce((quantity, line) => quantity + line.quantity, 0);
+}
+
 export function createCustomPizzaCartLine({
   basePricePennies,
+  customizerId,
   extrasPricePennies,
   image,
   quantity = 1,
   selectedToppings,
   totalPricePennies,
 }: AddCustomPizzaInput) {
-  const normalizedToppings = normalizeToppings(selectedToppings);
-  const identity = normalizedToppings.map(slugifyCartPart).join("+") || "no-toppings";
+  const normalizedToppings = normalizeToppingOptions(selectedToppings);
+  const selectedToppingIds = normalizedToppings.map((topping) => topping.id);
+  const selectedToppingNames = normalizedToppings.map((topping) => topping.name);
+  const identity = selectedToppingIds.join("+") || "no-toppings";
 
   return {
     basePricePennies,
+    customizerId,
     dietaryTags: [],
     extrasPricePennies,
     id: `custom:create-your-own:${identity}`,
@@ -75,7 +107,8 @@ export function createCustomPizzaCartLine({
     productSlug: "create-your-own",
     productType: "pizza",
     quantity: clampCartQuantity(quantity),
-    selectedToppings: normalizedToppings,
+    selectedToppingIds,
+    selectedToppings: selectedToppingNames,
     unitPricePennies: totalPricePennies,
   } satisfies CartLine;
 }
@@ -87,6 +120,32 @@ export function normalizeToppings(toppings: readonly string[]) {
     .sort((firstTopping, secondTopping) =>
       firstTopping.localeCompare(secondTopping, "en-GB"),
     );
+}
+
+export function normalizeToppingOptions(
+  toppings: readonly CreateYourOwnToppingOption[],
+) {
+  const toppingsById = new Map<number, CreateYourOwnToppingOption>();
+
+  for (const topping of toppings) {
+    if (!Number.isInteger(topping.id) || topping.id <= 0) {
+      continue;
+    }
+
+    const name = topping.name.trim();
+    if (!name) {
+      continue;
+    }
+
+    toppingsById.set(topping.id, {
+      ...topping,
+      name,
+    });
+  }
+
+  return [...toppingsById.values()].sort(
+    (firstTopping, secondTopping) => firstTopping.id - secondTopping.id,
+  );
 }
 
 export function serializeCart(items: readonly CartLine[]): PersistedCart {
@@ -140,6 +199,21 @@ function parseCartLine(value: unknown): CartLine | null {
   }
 
   const lineType = value.lineType === "custom-pizza" ? "custom-pizza" : "menu-item";
+  const menuItemId = isPositiveInteger(value.menuItemId)
+    ? value.menuItemId
+    : undefined;
+  const customizerId = isPositiveInteger(value.customizerId)
+    ? value.customizerId
+    : undefined;
+
+  if (lineType === "menu-item" && !menuItemId) {
+    return null;
+  }
+
+  if (lineType === "custom-pizza" && !customizerId) {
+    return null;
+  }
+
   const dietaryTags = Array.isArray(value.dietaryTags)
     ? value.dietaryTags.filter((tag): tag is DietaryTag =>
         allowedDietaryTags.has(tag as DietaryTag),
@@ -151,6 +225,7 @@ function parseCartLine(value: unknown): CartLine | null {
     id: value.id,
     image: parseImage(value.image),
     lineType,
+    menuItemId,
     name: value.name,
     productId: value.productId,
     productSlug: value.productSlug,
@@ -163,7 +238,14 @@ function parseCartLine(value: unknown): CartLine | null {
     const selectedToppings = Array.isArray(value.selectedToppings)
       ? value.selectedToppings.filter(isNonEmptyString)
       : [];
+    const selectedToppingIds = Array.isArray(value.selectedToppingIds)
+      ? value.selectedToppingIds.filter(isPositiveInteger)
+      : [];
 
+    line.customizerId = customizerId;
+    line.selectedToppingIds = [...new Set(selectedToppingIds)].sort(
+      (firstId, secondId) => firstId - secondId,
+    );
     line.selectedToppings = normalizeToppings(selectedToppings);
 
     if (isNonNegativeInteger(value.basePricePennies)) {
@@ -176,6 +258,16 @@ function parseCartLine(value: unknown): CartLine | null {
   }
 
   return line;
+}
+
+function parsePositiveInteger(value: string) {
+  const parsedValue = Number.parseInt(value, 10);
+
+  if (!Number.isInteger(parsedValue) || parsedValue <= 0) {
+    throw new Error("Menu item is missing a backend id.");
+  }
+
+  return parsedValue;
 }
 
 function parseImage(value: unknown) {
@@ -205,11 +297,6 @@ function isNonNegativeInteger(value: unknown): value is number {
   return Number.isInteger(value) && typeof value === "number" && value >= 0;
 }
 
-function slugifyCartPart(value: string) {
-  return value
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+function isPositiveInteger(value: unknown): value is number {
+  return Number.isInteger(value) && typeof value === "number" && value > 0;
 }

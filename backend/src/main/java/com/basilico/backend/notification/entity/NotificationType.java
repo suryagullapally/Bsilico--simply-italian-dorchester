@@ -1,0 +1,13 @@
+package com.basilico.backend.notification.entity;
+
+public enum NotificationType {
+	ORDER_RECEIVED,
+	ORDER_ACCEPTED,
+	ORDER_READY,
+	ORDER_CANCELLED,
+	BOOKING_REQUEST_RECEIVED,
+	BOOKING_CONFIRMED,
+	BOOKING_DECLINED,
+	BOOKING_CANCELLED,
+	MANUAL_MESSAGE
+}

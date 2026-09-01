@@ -86,7 +86,7 @@ export function MenuCategorySection({
                 aria-label="Available toppings"
               >
                 {customizer.toppings.map((topping) => (
-                  <li key={topping}>{topping}</li>
+                  <li key={topping.id}>{topping.name}</li>
                 ))}
               </ul>
               <span className="menu-create-own__cta">Create yours</span>

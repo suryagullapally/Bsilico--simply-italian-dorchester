@@ -4,6 +4,7 @@ import { MobileConversionBar } from "@/components/home/MobileConversionBar";
 import { Container } from "@/components/layout/Container";
 import { MenuCategoryNav } from "@/components/menu/MenuCategoryNav";
 import { MenuCategorySection } from "@/components/menu/MenuCategorySection";
+import { MenuDeliveryStatus } from "@/components/menu/MenuDeliveryStatus";
 import { MenuDietaryLegend } from "@/components/menu/MenuDietaryLegend";
 import { MenuScrollReset } from "@/components/menu/MenuScrollReset";
 import { dietaryLabels, dietaryLegend } from "@/data/menu";
@@ -32,6 +33,7 @@ export function MenuPage({ menu }: MenuPageProps) {
         </section>
 
         <MenuCategoryNav categories={menu.categories} />
+        <MenuDeliveryStatus />
         <MenuDietaryLegend items={dietaryLegend} />
 
         <Container className="menu-sections">

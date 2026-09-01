@@ -8,7 +8,9 @@ import { Container } from "@/components/layout/Container";
 export const metadata: Metadata = {
   description:
     "Send a table booking request for Basilico, Simple Italian in Dorchester.",
-  title: "Book a Table | Basilico Dorchester",
+  title: {
+    absolute: "Book a Table | Basilico Dorchester",
+  },
 };
 
 export default function BookPage() {

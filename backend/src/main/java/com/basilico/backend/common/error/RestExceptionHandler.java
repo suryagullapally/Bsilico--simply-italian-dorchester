@@ -15,6 +15,16 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class RestExceptionHandler {
 
+	@ExceptionHandler(BadRequestException.class)
+	public ResponseEntity<ApiErrorResponse> handleBadRequest(BadRequestException exception) {
+		return error(HttpStatus.BAD_REQUEST, "BAD_REQUEST", exception.getMessage());
+	}
+
+	@ExceptionHandler(UnauthorizedException.class)
+	public ResponseEntity<ApiErrorResponse> handleUnauthorized(UnauthorizedException exception) {
+		return error(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", exception.getMessage());
+	}
+
 	@ExceptionHandler(ResourceNotFoundException.class)
 	public ResponseEntity<ApiErrorResponse> handleNotFound(ResourceNotFoundException exception) {
 		return error(HttpStatus.NOT_FOUND, "NOT_FOUND", exception.getMessage());
@@ -23,6 +33,11 @@ public class RestExceptionHandler {
 	@ExceptionHandler(ConflictException.class)
 	public ResponseEntity<ApiErrorResponse> handleConflict(ConflictException exception) {
 		return error(HttpStatus.CONFLICT, "CONFLICT", exception.getMessage());
+	}
+
+	@ExceptionHandler(ServiceUnavailableException.class)
+	public ResponseEntity<ApiErrorResponse> handleServiceUnavailable(ServiceUnavailableException exception) {
+		return error(HttpStatus.SERVICE_UNAVAILABLE, "SERVICE_UNAVAILABLE", exception.getMessage());
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)

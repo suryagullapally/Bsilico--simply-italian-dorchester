@@ -1,15 +1,25 @@
 server:
-  port: 8080
+  port: ${PORT:${SERVER_PORT:8080}}
+  forward-headers-strategy: framework
   error:
     include-binding-errors: never
     include-message: never
     include-stacktrace: never
+  servlet:
+    session:
+      timeout: ${ADMIN_SESSION_TIMEOUT:8h}
+      cookie:
+        http-only: true
+        same-site: ${SESSION_COOKIE_SAME_SITE:lax}
+        secure: ${SESSION_COOKIE_SECURE:false}
 
 spring:
+  config:
+    import: "optional:file:.env[.properties]"
   application:
     name: basilico-backend
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:basilico_db}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:basilico_db}${DB_JDBC_PARAMETERS:}
     username: ${DB_USER:basilico}
     password: ${DB_PASSWORD:change-me}
     driver-class-name: org.postgresql.Driver
@@ -20,13 +30,72 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS:false}
 
 management:
   endpoints:
     web:
       exposure:
         include: health
+  health:
+    mail:
+      enabled: ${MAIL_HEALTH_ENABLED:false}
   endpoint:
     health:
       probes:
         enabled: true
+
+basilico:
+  cors:
+    allowed-origins: ${BASILICO_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,http://localhost:3002}
+  admin:
+    bootstrap:
+      email: ${BASILICO_ADMIN_EMAIL:}
+      password: ${BASILICO_ADMIN_PASSWORD:}
+      display-name: ${BASILICO_ADMIN_DISPLAY_NAME:}
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    window-seconds: ${RATE_LIMIT_WINDOW_SECONDS:60}
+    order-create-limit: ${RATE_LIMIT_ORDER_CREATE_LIMIT:120}
+    booking-create-limit: ${RATE_LIMIT_BOOKING_CREATE_LIMIT:60}
+    checkout-session-limit: ${RATE_LIMIT_CHECKOUT_SESSION_LIMIT:120}
+    delivery-quote-limit: ${RATE_LIMIT_DELIVERY_QUOTE_LIMIT:120}
+    admin-login-limit: ${RATE_LIMIT_ADMIN_LOGIN_LIMIT:10}
+  payments:
+    stripe:
+      secret-key: ${STRIPE_SECRET_KEY:}
+      webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+      customer-web-base-url: ${CUSTOMER_WEB_BASE_URL:http://localhost:3000}
+    manual-payment-status:
+      enabled: ${BASILICO_ALLOW_MANUAL_PAYMENT_STATUS:false}
+  notifications:
+    email:
+      from-email: ${MAIL_FROM_EMAIL:orders@basilico.local}
+      from-name: ${MAIL_FROM_NAME:Basilico - Simple Italian}
+      max-attempts: ${MAIL_MAX_ATTEMPTS:3}
+      batch-size: ${MAIL_BATCH_SIZE:10}
+      worker-enabled: ${MAIL_WORKER_ENABLED:true}
+      retry-delay-ms: ${MAIL_RETRY_DELAY_MS:30000}
+      initial-delay-ms: ${MAIL_INITIAL_DELAY_MS:5000}
+  delivery:
+    postcodes-io:
+      base-url: ${POSTCODES_IO_BASE_URL:https://api.postcodes.io}
+      timeout-ms: ${POSTCODES_IO_TIMEOUT_MS:2500}
+      cache-ttl-seconds: ${POSTCODES_IO_CACHE_TTL_SECONDS:86400}
+      cache-max-entries: ${POSTCODES_IO_CACHE_MAX_ENTRIES:500}
+    openrouteservice:
+      api-key: ${OPENROUTESERVICE_API_KEY:}
+      base-url: ${OPENROUTESERVICE_BASE_URL:https://api.heigit.org/openrouteservice}
+      timeout-ms: ${OPENROUTESERVICE_TIMEOUT_MS:3500}
+      cache-ttl-seconds: ${OPENROUTESERVICE_CACHE_TTL_SECONDS:900}
+      cache-max-entries: ${OPENROUTESERVICE_CACHE_MAX_ENTRIES:500}

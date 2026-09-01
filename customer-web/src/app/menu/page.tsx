@@ -8,7 +8,9 @@ import { getMenu } from "@/lib/api/menu-api";
 import type { MenuData } from "@/types/menu";
 
 export const metadata: Metadata = {
-  title: "Basilico Menu | Italian Restaurant Dorchester",
+  title: {
+    absolute: "Basilico Menu | Italian Restaurant Dorchester",
+  },
   description:
     "Browse the Basilico menu for sourdough pizza, Italian favourites and desserts in Dorchester, Dorset.",
 };

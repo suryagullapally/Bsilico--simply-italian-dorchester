@@ -24,7 +24,7 @@ export const basilicoCollectionAddress = [
 
 export const checkoutGuidance = {
   delivery:
-    "Delivery availability and any applicable delivery charge will be confirmed before payment.",
+    "Delivery is checked from the address postcode you enter here. Fee and estimated delivery are confirmed before payment.",
   hours: `${OPENING_DAYS}, ${OPENING_HOURS}. Tuesday closed.`,
   notes: "Please tell us about any allergies or dietary requirements.",
   time: "Requested times are subject to confirmation.",

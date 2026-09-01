@@ -1,19 +1,20 @@
 import { ToppingOption } from "@/components/pizza-customizer/ToppingOption";
+import type { CreateYourOwnToppingOption } from "@/types/menu";
 
 type ToppingSelectorProps = {
-  onToggleTopping: (name: string) => void;
-  selectedToppings: string[];
+  onToggleTopping: (topping: CreateYourOwnToppingOption) => void;
+  selectedToppingIds: number[];
   toppingPricePennies: number;
-  toppings: string[];
+  toppings: CreateYourOwnToppingOption[];
 };
 
 export function ToppingSelector({
   onToggleTopping,
-  selectedToppings,
+  selectedToppingIds,
   toppingPricePennies,
   toppings,
 }: ToppingSelectorProps) {
-  const selectedToppingSet = new Set(selectedToppings);
+  const selectedToppingSet = new Set(selectedToppingIds);
 
   return (
     <section
@@ -30,10 +31,10 @@ export function ToppingSelector({
       <div className="topping-selector__grid">
         {toppings.map((topping) => (
           <ToppingOption
-            key={topping}
-            name={topping}
+            key={topping.id}
             onToggle={onToggleTopping}
-            selected={selectedToppingSet.has(topping)}
+            selected={selectedToppingSet.has(topping.id)}
+            topping={topping}
             toppingPricePennies={toppingPricePennies}
           />
         ))}

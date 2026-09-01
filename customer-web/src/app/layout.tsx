@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { SplashScreen } from "@/components/splash/SplashScreen";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site-config";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -18,9 +19,27 @@ const cormorantGaramond = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "Basilico | Simple Italian | Dorchester",
-  description:
-    "Basilico is an Italian restaurant serving pizza and Italian food in Dorchester, Dorset.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Basilico | Simple Italian | Dorchester",
+    template: "%s | Basilico Dorchester",
+  },
+  description: SITE_DESCRIPTION,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "Basilico | Simple Italian | Dorchester",
+    description: SITE_DESCRIPTION,
+    siteName: SITE_NAME,
+    type: "website",
+    url: "/",
+    locale: "en_GB",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

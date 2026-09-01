@@ -2,14 +2,15 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { formatGbpPennies } from "@/lib/format-price";
 import { routes } from "@/lib/routes";
+import type { CreateYourOwnToppingOption } from "@/types/menu";
 import type { PizzaPricing } from "@/types/pizza-customizer";
 
 type CustomizerSummaryProps = {
   added: boolean;
   onAddToOrder: () => void;
-  onRemoveTopping: (name: string) => void;
+  onRemoveTopping: (topping: CreateYourOwnToppingOption) => void;
   pricing: PizzaPricing;
-  selectedToppings: string[];
+  selectedToppings: CreateYourOwnToppingOption[];
 };
 
 export function CustomizerSummary({
@@ -32,8 +33,8 @@ export function CustomizerSummary({
         {selectedToppings.length > 0 ? (
           <ul className="customizer-summary__toppings">
             {selectedToppings.map((topping) => (
-              <li className="customizer-summary__topping" key={topping}>
-                <span>{topping}</span>
+              <li className="customizer-summary__topping" key={topping.id}>
+                <span>{topping.name}</span>
                 <button
                   className="customizer-summary__remove"
                   onClick={() => onRemoveTopping(topping)}

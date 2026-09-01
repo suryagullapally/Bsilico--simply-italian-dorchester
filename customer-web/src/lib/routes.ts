@@ -4,6 +4,7 @@ export const routes = {
   book: "/book",
   checkout: "/checkout",
   checkoutPayment: "/checkout/payment",
+  checkoutPaymentReturn: "/checkout/payment/return",
   contact: "/#visit",
   createYourOwn: "/menu/create-your-own",
   home: "/",

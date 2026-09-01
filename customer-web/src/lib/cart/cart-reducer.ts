@@ -40,6 +40,17 @@ export function cartReducer(state: CartState, action: CartAction): CartState {
         ),
       };
 
+    case "set-line-quantity":
+      return {
+        ...state,
+        items: setLineQuantity(
+          state.items,
+          action.lineId,
+          action.quantity,
+          action.line,
+        ),
+      };
+
     case "remove-line":
       return {
         ...state,
@@ -68,5 +79,29 @@ function addOrMergeLine(items: CartLine[], line: CartLine) {
           quantity: clampCartQuantity(item.quantity + line.quantity),
         }
       : item,
+  );
+}
+
+function setLineQuantity(
+  items: CartLine[],
+  lineId: string,
+  quantity: number,
+  line?: CartLine,
+) {
+  const nextQuantity = Math.trunc(quantity);
+
+  if (!Number.isFinite(quantity) || nextQuantity <= 0) {
+    return items.filter((item) => item.id !== lineId);
+  }
+
+  const existingLine = items.find((item) => item.id === lineId);
+  const clampedQuantity = clampCartQuantity(nextQuantity);
+
+  if (!existingLine) {
+    return line ? [...items, { ...line, quantity: clampedQuantity }] : items;
+  }
+
+  return items.map((item) =>
+    item.id === lineId ? { ...item, quantity: clampedQuantity } : item,
   );
 }

@@ -31,7 +31,9 @@ export async function generateMetadata({
     const item = await getMenuItemBySlug(slug);
 
     return {
-      title: `${item.name} | Basilico Dorchester`,
+      title: {
+        absolute: `${item.name} | Basilico Dorchester`,
+      },
       description:
         item.description ??
         `View ${item.name} on the Basilico menu in Dorchester.`,
@@ -39,12 +41,16 @@ export async function generateMetadata({
   } catch (error) {
     if (isMenuApiNotFoundError(error)) {
       return {
-        title: "Menu item not found | Basilico Dorchester",
+        title: {
+          absolute: "Menu item not found | Basilico Dorchester",
+        },
       };
     }
 
     return {
-      title: "Basilico Menu | Dorchester",
+      title: {
+        absolute: "Basilico Menu | Dorchester",
+      },
     };
   }
 }
