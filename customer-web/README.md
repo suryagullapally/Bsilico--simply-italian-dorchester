@@ -8,26 +8,49 @@ Customer-web uses environment variables for runtime endpoints and public site
 metadata:
 
 ```bash
-NEXT_PUBLIC_SITE_URL=https://customer-domain.example
-NEXT_PUBLIC_API_BASE_URL=https://api-domain.example
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+NEXT_PUBLIC_SITE_URL=https://basilicodorchester.co.uk
+NEXT_PUBLIC_API_BASE_URL=https://api.basilicodorchester.co.uk
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=<Stripe test publishable key>
 ```
 
 Use local values from `.env.example` for development. Production must provide
 the real HTTPS customer URL so canonical URLs, Open Graph metadata, robots and
 the sitemap do not point at localhost.
 
-For Vercel, create the project with:
+`NEXT_PUBLIC_*` values are compiled into the browser bundle, so update/redeploy
+after changing them. Keep Stripe in test mode for the first deployed QA pass.
+
+## Cloudflare Workers
+
+Customer-web is prepared for Cloudflare Workers with vinext, Cloudflare's
+current recommended Next.js-on-Workers path for new Next.js 16 applications.
+The normal Next.js development workflow still works:
+
+```bash
+npm run dev
+npm run build
+```
+
+Cloudflare Workers commands:
+
+```bash
+npm run build:vinext
+npm run preview
+npm run deploy
+```
+
+The Worker name is configured as `basilico-customer` in `wrangler.jsonc`.
+Generated vinext/Workers output is ignored through `.gitignore`.
+
+For Cloudflare, create the Worker project with:
 
 - root directory: `customer-web`
 - install command: `npm install`
-- build command: `npm run build`
-- output: Vercel default for Next.js
+- build command: `npm run build:vinext`
+- deploy command: `npx wrangler deploy --config dist/server/wrangler.json`
+- Worker name: `basilico-customer`
 
-Set `NEXT_PUBLIC_API_BASE_URL` to the deployed backend HTTPS origin and
-`NEXT_PUBLIC_SITE_URL` to the deployed customer-web HTTPS origin. `NEXT_PUBLIC_*`
-values are compiled into the browser bundle, so update/redeploy after changing
-them.
+Do not configure the custom domain until staging verification is complete.
 
 ## Menu API
 
@@ -142,10 +165,6 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
-
-Use Vercel for the Basilico customer-web deployment. In this monorepo, select
-`customer-web` as the Vercel project root so Vercel runs the package scripts
-from the correct directory.
+## Deploy
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
