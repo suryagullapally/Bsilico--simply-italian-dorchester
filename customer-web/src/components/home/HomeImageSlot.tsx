@@ -1,5 +1,7 @@
+"use client";
+
 import Image from "next/image";
-import { publicAssetExists } from "@/lib/public-assets";
+import { useState } from "react";
 
 type HomeImageSlotProps = {
   alt: string;
@@ -18,7 +20,8 @@ export function HomeImageSlot({
   sizes,
   src,
 }: HomeImageSlotProps) {
-  const hasImage = publicAssetExists(src);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const hasImage = src.trim().length > 0 && failedSrc !== src;
 
   return (
     <div
@@ -40,6 +43,7 @@ export function HomeImageSlot({
           priority={priority}
           sizes={sizes}
           src={src}
+          onError={() => setFailedSrc(src)}
         />
       ) : (
         <span className="sr-only">{alt} will be added here.</span>
