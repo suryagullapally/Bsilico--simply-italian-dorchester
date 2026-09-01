@@ -31,7 +31,7 @@ export const signatureDishes: Dish[] = [
     description:
       "Crushed San Marzano tomatoes, fior di latte cheese, parmesan DOP, extra virgin olive oil and Fresh basil.",
     href: "/menu/pizza-margherita",
-    imageSrc: "/images/menu/margherita.png",
+    imageSrc: "/images/menu/margherita.webp",
     name: "PIZZA MARGHERITA | V GF VE",
     price: "£8.99",
   },
@@ -39,14 +39,14 @@ export const signatureDishes: Dish[] = [
     description:
       "Layers of baked pasta with creamy Bolognese sauce, egg, mozzarella cheese and Parmesan DOP.",
     href: "/menu/lasagna",
-    imageSrc: "/images/menu/lasagna.png",
+    imageSrc: "/images/menu/lasagna.webp",
     name: "LASAGNA",
     price: "£10.99",
   },
   {
     description: "Pizza bread with garlic oil & rosemary sprinkled with sea salt.",
     href: "/menu/schiacciatella",
-    imageSrc: "/images/menu/schiacciatella.png",
+    imageSrc: "/images/menu/starters/schiacciatella.webp",
     name: "SCHIACCIATELLA | V VE",
     price: "£4.45",
   },
@@ -54,7 +54,7 @@ export const signatureDishes: Dish[] = [
     description:
       "Sweet, warm dough filled with Nutella, banana & fluffy marshmallow drizzled with salted caramel sauce.",
     href: "/menu/calzone-alla-nutella",
-    imageSrc: "/images/menu/calzoneallanutella.png",
+    imageSrc: "/images/menu/sweet-tooth/calzone-alla-nutella.webp",
     name: "CALZONE ALLA NUTELLA",
     price: "£5.99",
   },
@@ -63,14 +63,14 @@ export const signatureDishes: Dish[] = [
 export const restaurantImages: GalleryImage[] = [
   {
     alt: "Basilico dining room with tables leading toward the restaurant counter",
-    src: "/images/restaurant/interior-01.jpg",
+    src: "/images/restaurant/interior-01.webp",
   },
   {
     alt: "Basilico dining room seating and warm table lighting",
-    src: "/images/restaurant/interior-02.jpg",
+    src: "/images/restaurant/interior-02.webp",
   },
   {
     alt: "Basilico wood-fired oven glowing with flame",
-    src: "/images/restaurant/interior-03.jpg",
+    src: "/images/restaurant/interior-03.webp",
   },
 ];

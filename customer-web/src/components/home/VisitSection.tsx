@@ -12,7 +12,7 @@ const addressLines = [
 
 const phoneDisplay = "07424 642900";
 const phoneHref = "tel:07424642900";
-const mapImageSrc = "/images/location/basilico-map.png";
+const mapImageSrc = "/images/location/basilico-map.webp";
 const directionsQuery =
   "41 Trinity Street, Dorchester, Dorset, DT1 1TT, United Kingdom";
 const directionsHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(

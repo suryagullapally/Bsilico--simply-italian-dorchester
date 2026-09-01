@@ -4,7 +4,7 @@ import { Container } from "@/components/layout/Container";
 import { ButtonLink } from "@/components/ui/Button";
 import { routes } from "@/lib/routes";
 
-const HERO_IMAGE_SRC = "/images/home/basilico-hero.png";
+const HERO_IMAGE_SRC = "/images/home/basilico-hero.webp";
 
 export function HeroSection() {
   return (

@@ -1,7 +1,7 @@
 import { Container } from "@/components/layout/Container";
 import { HomeImageSlot } from "@/components/home/HomeImageSlot";
 
-const STORY_IMAGE_SRC = "/images/restaurant/interior-03.jpg";
+const STORY_IMAGE_SRC = "/images/restaurant/interior-03.webp";
 
 const storyPrinciples = [
   {

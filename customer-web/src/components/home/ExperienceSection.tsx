@@ -9,7 +9,7 @@ const experiences = [
     cta: "Book a Table",
     description: "Book a table and enjoy Basilico in the restaurant.",
     href: routes.book,
-    imageSrc: "/images/restaurant/interior-01.jpg",
+    imageSrc: "/images/restaurant/interior-01.webp",
     label: "Dine with us",
   },
   {
@@ -17,7 +17,7 @@ const experiences = [
     cta: "Order Online",
     description: "Enjoy Basilico at home with delivery or collection.",
     href: routes.order,
-    imageSrc: "/images/home/order-basilico.png",
+    imageSrc: "/images/home/order-basilico.webp",
     label: "Order Basilico",
   },
 ];

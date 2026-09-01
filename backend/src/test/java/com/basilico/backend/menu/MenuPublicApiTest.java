@@ -38,7 +38,7 @@ class MenuPublicApiTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.name").value("PIZZA MARGHERITA"))
 				.andExpect(jsonPath("$.pricePence").value(899))
-				.andExpect(jsonPath("$.imagePath").value("/images/menu/margherita.png"))
+				.andExpect(jsonPath("$.imagePath").value("/images/menu/margherita.webp"))
 				.andExpect(jsonPath("$.productType").value("PIZZA"))
 				.andExpect(jsonPath("$.dietaryTags[0]").value("V"))
 				.andExpect(jsonPath("$.dietaryTags[1]").value("GF"))

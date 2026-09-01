@@ -18,7 +18,7 @@ export const pizzaBaseVisual: PizzaBaseVisual = {
   group: "base",
   id: "temporary-margherita-foundation",
   layerOrder: pizzaVisualLayerOrder.base,
-  src: "/images/menu/margherita.png",
+  src: "/images/menu/margherita.webp",
   temporary: true,
 };
 

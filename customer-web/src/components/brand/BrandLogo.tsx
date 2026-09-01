@@ -15,10 +15,10 @@ export function BrandLogo({
 }: BrandLogoProps) {
   return (
     <Image
-      src="/brand/basilico-logo.png"
+      src="/brand/basilico-logo.webp"
       alt={alt}
-      width={1536}
-      height={1024}
+      width={1024}
+      height={683}
       priority={priority}
       sizes={sizes}
       className={["brand-logo", className].filter(Boolean).join(" ")}

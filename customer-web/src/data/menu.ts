@@ -89,7 +89,7 @@ const referenceMenuItems: ReferenceMenuItem[] = [
     id: "schiacciatella",
     image: {
       alt: "Schiacciatella garlic bread at Basilico",
-      src: "/images/menu/schiacciatella.png",
+      src: "/images/menu/starters/schiacciatella.webp",
     },
     name: "SCHIACCIATELLA",
     price: 4.45,
@@ -179,7 +179,7 @@ const referenceMenuItems: ReferenceMenuItem[] = [
     id: "margherita",
     image: {
       alt: "Pizza Margherita at Basilico",
-      src: "/images/menu/margherita.png",
+      src: "/images/menu/margherita.webp",
     },
     name: "PIZZA MARGHERITA",
     price: 8.99,
@@ -364,7 +364,7 @@ const referenceMenuItems: ReferenceMenuItem[] = [
     id: "lasagna",
     image: {
       alt: "Lasagna at Basilico",
-      src: "/images/menu/lasagna.png",
+      src: "/images/menu/lasagna.webp",
     },
     name: "LASAGNA",
     price: 10.99,
@@ -441,7 +441,7 @@ const referenceMenuItems: ReferenceMenuItem[] = [
     id: "calzoneallanutella",
     image: {
       alt: "Calzone alla Nutella at Basilico",
-      src: "/images/menu/calzoneallanutella.png",
+      src: "/images/menu/sweet-tooth/calzone-alla-nutella.webp",
     },
     name: "CALZONE ALLA NUTELLA",
     price: 5.99,
