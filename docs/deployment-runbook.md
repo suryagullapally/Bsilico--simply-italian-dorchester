@@ -48,12 +48,22 @@ DB_USER=<Render PostgreSQL user>
 DB_PASSWORD=<Render PostgreSQL password>
 BASILICO_CORS_ALLOWED_ORIGINS=https://CUSTOMER_DOMAIN,https://ADMIN_DOMAIN
 CUSTOMER_WEB_BASE_URL=https://CUSTOMER_DOMAIN
+ADMIN_SESSION_TIMEOUT=365d
+ADMIN_SESSION_COOKIE_MAX_AGE=365d
 SESSION_COOKIE_SECURE=true
 SESSION_COOKIE_SAME_SITE=<lax-or-none>
 BASILICO_ADMIN_EMAIL=<owner email>
 BASILICO_ADMIN_PASSWORD=<owner bootstrap password>
 BASILICO_ADMIN_DISPLAY_NAME=<owner display name>
 ```
+
+For Google Cloud Run with Neon PostgreSQL, set the same values as Cloud Run
+environment variables or Secret Manager-backed variables. Use the Neon host,
+database, user and password for `DB_HOST`, `DB_NAME`, `DB_USER` and
+`DB_PASSWORD`; keep `DB_JDBC_PARAMETERS=?sslmode=require` if the selected Neon
+connection string requires SSL parameters. Keep `ADMIN_SESSION_TIMEOUT=365d`
+and `ADMIN_SESSION_COOKIE_MAX_AGE=365d` together so the PostgreSQL session row
+and the browser's persistent `SESSION` cookie expire on the same schedule.
 
 Use `SESSION_COOKIE_SAME_SITE=lax` when the admin and API URLs are same-site
 subdomains, such as `admin.example.com` and `api.example.com`. Use
@@ -65,7 +75,6 @@ Optional first-deploy values:
 
 ```text
 DB_JDBC_PARAMETERS=?sslmode=require
-ADMIN_SESSION_TIMEOUT=8h
 MAIL_WORKER_ENABLED=false
 BASILICO_ALLOW_MANUAL_PAYMENT_STATUS=false
 ```
@@ -84,6 +93,7 @@ Verify from backend logs:
 
 - migrations validate successfully
 - current schema advances through all repository migrations
+- `V19__create_spring_session_tables.sql` creates `SPRING_SESSION` and `SPRING_SESSION_ATTRIBUTES`
 - no QA/test orders, bookings or payment attempts are seeded
 - menu seed migrations create the approved Basilico menu
 - fulfilment defaults are collection enabled and delivery disabled
@@ -307,6 +317,7 @@ Admin:
 
 - [ ] login works
 - [ ] refresh preserves authenticated session
+- [ ] backend restart or Cloud Run scale-to-zero/cold start preserves authenticated session
 - [ ] logout works
 - [ ] dashboard loads real data
 - [ ] order workflow can move `NEW` -> `ACCEPTED` -> `PREPARING` -> `READY`
@@ -328,7 +339,7 @@ Security / operations:
 - [ ] `/actuator/health` reports `UP`
 - [ ] admin noindex/nofollow headers are present
 - [ ] production CORS uses explicit HTTPS origins only
-- [ ] session cookie is HttpOnly and Secure
+- [ ] session cookie is HttpOnly, Secure and has the expected persistent Max-Age
 - [ ] no production app calls localhost
 - [ ] delivery remains disabled until final owner launch approval
 - [ ] Radius delivery settings match the owner-approved 6-mile / £2-£5 bands

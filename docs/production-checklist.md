@@ -38,7 +38,8 @@ production environment.
 - [ ] HTTPS enforced at the platform/proxy layer
 - [ ] explicit CORS origins configured
 - [ ] secure session cookies enabled
-- [ ] admin session timeout confirmed
+- [ ] admin session timeout and cookie Max-Age confirmed
+- [ ] Spring Session JDBC tables exist in production PostgreSQL
 - [ ] Flyway migrations validated against production database
 - [ ] actuator exposure checked
 - [ ] logs checked for secret/PII safety
@@ -69,6 +70,7 @@ production environment.
 - [ ] production owner account bootstrapped
 - [ ] production owner password changed/secured
 - [ ] login QA completed
+- [ ] refresh and backend restart preserve authenticated admin session
 - [ ] logout/session expiry QA completed
 - [ ] noindex headers verified
 - [ ] admin URL not publicly linked from customer website

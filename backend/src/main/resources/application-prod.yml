@@ -1,8 +1,9 @@
 server:
   servlet:
     session:
-      timeout: ${ADMIN_SESSION_TIMEOUT:8h}
+      timeout: ${ADMIN_SESSION_TIMEOUT:365d}
       cookie:
+        http-only: true
         secure: ${SESSION_COOKIE_SECURE:true}
         same-site: ${SESSION_COOKIE_SAME_SITE:lax}
 
@@ -17,6 +18,11 @@ spring:
       connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:30000}
       validation-timeout: ${DB_VALIDATION_TIMEOUT_MS:5000}
       max-lifetime: ${DB_MAX_LIFETIME_MS:1800000}
+  session:
+    timeout: ${ADMIN_SESSION_TIMEOUT:365d}
+    jdbc:
+      initialize-schema: never
+      table-name: SPRING_SESSION
   mail:
     host: ${MAIL_HOST:}
     port: ${MAIL_PORT:587}
@@ -32,6 +38,12 @@ spring:
 basilico:
   cors:
     allowed-origins: ${BASILICO_CORS_ALLOWED_ORIGINS:}
+  admin:
+    session:
+      cookie:
+        max-age: ${ADMIN_SESSION_COOKIE_MAX_AGE:365d}
+        secure: ${SESSION_COOKIE_SECURE:true}
+        same-site: ${SESSION_COOKIE_SAME_SITE:lax}
   payments:
     stripe:
       secret-key: ${STRIPE_SECRET_KEY:}

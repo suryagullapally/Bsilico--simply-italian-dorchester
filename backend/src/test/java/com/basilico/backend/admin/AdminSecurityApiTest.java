@@ -2,26 +2,36 @@ package com.basilico.backend.admin;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.util.AssertionErrors.assertEquals;
+import static org.springframework.test.util.AssertionErrors.assertNotNull;
+import static org.springframework.test.util.AssertionErrors.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.hamcrest.Matchers.containsString;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+
+import jakarta.servlet.http.Cookie;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockHttpSession;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.basilico.backend.admin.entity.AdminRole;
 import com.basilico.backend.admin.entity.AdminUser;
@@ -30,10 +40,18 @@ import com.basilico.backend.admin.service.AdminEmail;
 import com.basilico.backend.menu.entity.MenuItem;
 import com.basilico.backend.menu.repository.MenuItemRepository;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+		"spring.session.timeout=365d",
+		"server.servlet.session.timeout=365d",
+		"basilico.admin.session.cookie.max-age=365d",
+		"basilico.admin.session.cookie.secure=true",
+		"basilico.admin.session.cookie.same-site=Lax"
+})
 @AutoConfigureMockMvc
 @Transactional
 class AdminSecurityApiTest {
+
+	private static final int SESSION_COOKIE_MAX_AGE_SECONDS = 365 * 24 * 60 * 60;
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -46,6 +64,12 @@ class AdminSecurityApiTest {
 
 	@Autowired
 	private PasswordEncoder passwordEncoder;
+
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
+
+	@Autowired
+	private PlatformTransactionManager transactionManager;
 
 	@Test
 	void unauthenticatedAdminOrdersAreRejected() throws Exception {
@@ -84,26 +108,59 @@ class AdminSecurityApiTest {
 	void validLoginPersistsSecurityContextForMeEndpoint() throws Exception {
 		createAdmin("owner@basilico.test", "correct-password", true);
 
-		MvcResult loginResult = mockMvc.perform(post("/api/admin/auth/login")
+		Cookie sessionCookie = loginAndReturnSessionCookie("OWNER@BASILICO.TEST", "correct-password");
+
+		mockMvc.perform(get("/api/admin/auth/me").cookie(sessionCookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.email").value("owner@basilico.test"));
+	}
+
+	@Test
+	void validLoginPersistsSpringSessionInJdbc() throws Exception {
+		createAdmin("jdbc-session@basilico.test", "correct-password", true);
+
+		Cookie sessionCookie = loginAndReturnSessionCookie("jdbc-session@basilico.test", "correct-password");
+
+		Integer sessionCount = jdbcTemplate.queryForObject(
+				"select count(*) from SPRING_SESSION where SESSION_ID = ?",
+				Integer.class,
+				sessionCookie.getValue()
+		);
+		Integer attributeCount = jdbcTemplate.queryForObject(
+				"""
+						select count(*)
+						from SPRING_SESSION_ATTRIBUTES a
+						join SPRING_SESSION s on s.PRIMARY_ID = a.SESSION_PRIMARY_ID
+						where s.SESSION_ID = ?
+						""",
+				Integer.class,
+				sessionCookie.getValue()
+		);
+
+		assertEquals("login should create one JDBC-backed Spring Session", 1, sessionCount);
+		assertTrue("login should persist session attributes", attributeCount != null && attributeCount > 0);
+	}
+
+	@Test
+	void loginCookieIsLongLivedHttpOnlySecureAndSameSiteLax() throws Exception {
+		createAdmin("cookie@basilico.test", "correct-password", true);
+
+		mockMvc.perform(post("/api/admin/auth/login")
 						.with(csrf())
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{
-								  "email": "OWNER@BASILICO.TEST",
+								  "email": "cookie@basilico.test",
 								  "password": "correct-password"
 								}
 								"""))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.email").value("owner@basilico.test"))
-				.andExpect(jsonPath("$.displayName").value("Basilico Owner"))
-				.andExpect(jsonPath("$.role").value("OWNER"))
-				.andReturn();
-
-		MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
-
-		mockMvc.perform(get("/api/admin/auth/me").session(session))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.email").value("owner@basilico.test"));
+				.andExpect(cookie().exists("SESSION"))
+				.andExpect(cookie().httpOnly("SESSION", true))
+				.andExpect(cookie().secure("SESSION", true))
+				.andExpect(cookie().path("SESSION", "/"))
+				.andExpect(cookie().maxAge("SESSION", SESSION_COOKIE_MAX_AGE_SECONDS))
+				.andExpect(header().string("Set-Cookie", containsString("SameSite=Lax")));
 	}
 
 	@Test
@@ -191,30 +248,46 @@ class AdminSecurityApiTest {
 	}
 
 	@Test
+	void persistedSessionCanPerformCsrfProtectedMutation() throws Exception {
+		createAdmin("csrf-session@basilico.test", "correct-password", true);
+		MenuItem item = menuItemRepository.findBySlug("pizza-margherita").orElseThrow();
+		Cookie sessionCookie = loginAndReturnSessionCookie("csrf-session@basilico.test", "correct-password");
+
+		mockMvc.perform(patch("/api/admin/menu/items/{id}/availability", item.getId())
+						.cookie(sessionCookie)
+						.with(csrf())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"available\": false}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.available").value(false));
+	}
+
+	@Test
 	void logoutInvalidatesSession() throws Exception {
 		createAdmin("logout@basilico.test", "correct-password", true);
 
-		MvcResult loginResult = mockMvc.perform(post("/api/admin/auth/login")
-						.with(csrf())
-						.contentType(MediaType.APPLICATION_JSON)
-						.content("""
-								{
-								  "email": "logout@basilico.test",
-								  "password": "correct-password"
-								}
-								"""))
-				.andExpect(status().isOk())
-				.andReturn();
-
-		MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
+		Cookie sessionCookie = loginAndReturnSessionCookie("logout@basilico.test", "correct-password");
 
 		mockMvc.perform(post("/api/admin/auth/logout")
-						.session(session)
+						.cookie(sessionCookie)
 						.with(csrf()))
 				.andExpect(status().isNoContent())
-				.andExpect(cookie().maxAge("JSESSIONID", 0));
+				.andExpect(cookie().maxAge("SESSION", 0));
 
-		mockMvc.perform(get("/api/admin/auth/me").session(session))
+		assertSessionRowCount(sessionCookie, 0);
+
+		mockMvc.perform(get("/api/admin/auth/me").cookie(sessionCookie))
+				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void expiredJdbcSessionIsRejected() throws Exception {
+		createAdmin("expired@basilico.test", "correct-password", true);
+		Cookie sessionCookie = loginAndReturnSessionCookie("expired@basilico.test", "correct-password");
+
+		expirePersistedSession(sessionCookie);
+
+		mockMvc.perform(get("/api/admin/auth/me").cookie(sessionCookie))
 				.andExpect(status().isUnauthorized());
 	}
 
@@ -249,6 +322,48 @@ class AdminSecurityApiTest {
 		);
 		user.setActive(active);
 		return adminUserRepository.saveAndFlush(user);
+	}
+
+	private Cookie loginAndReturnSessionCookie(String email, String password) throws Exception {
+		MvcResult loginResult = mockMvc.perform(post("/api/admin/auth/login")
+						.with(csrf())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "email": "%s",
+								  "password": "%s"
+								}
+								""".formatted(email, password)))
+				.andExpect(status().isOk())
+				.andReturn();
+
+		Cookie sessionCookie = loginResult.getResponse().getCookie("SESSION");
+		assertNotNull("login should return the Spring Session cookie", sessionCookie);
+		return sessionCookie;
+	}
+
+	private void assertSessionRowCount(Cookie sessionCookie, int expectedCount) {
+		Integer sessionCount = jdbcTemplate.queryForObject(
+				"select count(*) from SPRING_SESSION where SESSION_ID = ?",
+				Integer.class,
+				sessionCookie.getValue()
+		);
+		assertEquals("unexpected persisted session row count", expectedCount, sessionCount);
+	}
+
+	private void expirePersistedSession(Cookie sessionCookie) {
+		TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+		transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+		transactionTemplate.executeWithoutResult(status -> jdbcTemplate.update(
+				"""
+						update SPRING_SESSION
+						set LAST_ACCESS_TIME = 0,
+						    MAX_INACTIVE_INTERVAL = 1,
+						    EXPIRY_TIME = 1
+						where SESSION_ID = ?
+						""",
+				sessionCookie.getValue()
+		));
 	}
 
 	private org.springframework.test.web.servlet.request.RequestPostProcessor adminUser() {

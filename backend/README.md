@@ -42,6 +42,7 @@ BASILICO_ADMIN_EMAIL=
 BASILICO_ADMIN_PASSWORD=
 BASILICO_ADMIN_DISPLAY_NAME=
 ADMIN_SESSION_TIMEOUT=8h
+ADMIN_SESSION_COOKIE_MAX_AGE=8h
 SESSION_COOKIE_SECURE=false
 SESSION_COOKIE_SAME_SITE=lax
 RATE_LIMIT_ENABLED=true
@@ -172,8 +173,13 @@ Health URLs:
 
 Admin APIs are protected by Spring Security using server-side sessions.
 Admin-web signs in with email and password, then the browser receives an
-HttpOnly `JSESSIONID` cookie from the backend. Admin-web does not store
+HttpOnly `SESSION` cookie from the backend. Admin-web does not store
 authentication tokens in `localStorage` or `sessionStorage`.
+
+Spring Session JDBC stores admin sessions in the primary PostgreSQL database.
+In production this means authenticated admin sessions survive Cloud Run
+instance restarts, rolling deploys and scale-to-zero cold starts, as long as the
+same Neon PostgreSQL database is attached.
 
 Passwords are stored with BCrypt hashes only. Plaintext passwords are never
 stored, logged or returned from the API.
@@ -222,13 +228,22 @@ run behind HTTPS with secure session cookies and real secret management.
 Production session cookies are configured by environment:
 
 ```txt
-ADMIN_SESSION_TIMEOUT=8h
+ADMIN_SESSION_TIMEOUT=365d
+ADMIN_SESSION_COOKIE_MAX_AGE=365d
 SESSION_COOKIE_SECURE=true
 SESSION_COOKIE_SAME_SITE=lax
 ```
 
-`ADMIN_SESSION_TIMEOUT` controls inactive admin sessions. The current default
-is eight hours, which is long enough for a restaurant shift but not permanent.
+`ADMIN_SESSION_TIMEOUT` controls inactive session expiry in the database.
+`ADMIN_SESSION_COOKIE_MAX_AGE` controls how long the browser keeps the
+persistent `SESSION` cookie. Keep both aligned for long-lived production admin
+sessions. The `prod` profile defaults both values to `365d`; local development
+keeps the shorter `8h` default.
+
+Flyway migration `V19__create_spring_session_tables.sql` creates the
+`SPRING_SESSION` and `SPRING_SESSION_ATTRIBUTES` tables used by Spring Session
+JDBC. Schema initialization is disabled in Spring Session itself so Flyway
+remains the only schema owner.
 
 ## Production CORS
 

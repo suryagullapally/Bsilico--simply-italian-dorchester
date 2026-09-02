@@ -117,7 +117,10 @@ Stripe webhooks are server-to-server and do not depend on browser CORS.
 ## Admin Session Cookies
 
 Backend sessions remain server-side Spring Security sessions. The browser
-receives an HttpOnly `JSESSIONID`; admin-web uses `credentials: include`.
+receives an HttpOnly `SESSION` cookie; admin-web uses `credentials: include`.
+Spring Session JDBC stores the session rows in the primary PostgreSQL database
+so admin sessions survive backend restarts, rolling deployments and Cloud Run
+scale-to-zero cold starts.
 
 For the preferred domain shape:
 
@@ -133,6 +136,8 @@ domain, keep:
 ```text
 SESSION_COOKIE_SECURE=true
 SESSION_COOKIE_SAME_SITE=lax
+ADMIN_SESSION_TIMEOUT=365d
+ADMIN_SESSION_COOKIE_MAX_AGE=365d
 ```
 
 If the final admin and API origins are truly cross-site, use:

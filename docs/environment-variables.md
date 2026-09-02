@@ -37,7 +37,8 @@ Admin authentication:
 | `BASILICO_ADMIN_EMAIL` | Initial setup only | Used only to bootstrap an owner if the email does not already exist. |
 | `BASILICO_ADMIN_PASSWORD` | Initial setup only | BCrypt-hashed at startup; never logged or stored as plaintext. |
 | `BASILICO_ADMIN_DISPLAY_NAME` | Initial setup only | Display name for the bootstrapped owner. |
-| `ADMIN_SESSION_TIMEOUT` | No | Defaults to `8h`; controls inactive session expiry. |
+| `ADMIN_SESSION_TIMEOUT` | No | Defaults to `365d` in `prod` and `8h` locally; controls inactive session expiry stored in PostgreSQL through Spring Session JDBC. |
+| `ADMIN_SESSION_COOKIE_MAX_AGE` | No | Defaults to `365d` in `prod` and `8h` locally; controls persistent browser lifetime for the HttpOnly `SESSION` cookie. Keep aligned with `ADMIN_SESSION_TIMEOUT`. |
 | `SESSION_COOKIE_SECURE` | Yes | Use `true` behind production HTTPS. |
 | `SESSION_COOKIE_SAME_SITE` | No | Defaults to `lax`. |
 
@@ -131,6 +132,8 @@ Required at first deployment:
 | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` | From Render PostgreSQL. |
 | `BASILICO_CORS_ALLOWED_ORIGINS` | Exact Vercel customer and admin HTTPS origins. |
 | `CUSTOMER_WEB_BASE_URL` | Exact customer HTTPS origin for payment return URLs. |
+| `ADMIN_SESSION_TIMEOUT=365d` | Long-lived inactive admin session expiry in the database. |
+| `ADMIN_SESSION_COOKIE_MAX_AGE=365d` | Persistent browser cookie lifetime for admin sessions. |
 | `SESSION_COOKIE_SECURE=true` | Required behind production HTTPS. |
 | `SESSION_COOKIE_SAME_SITE` | Use `lax` when admin and API are same-site subdomains. Use `none` only for truly cross-site HTTPS setups, such as Vercel preview domains talking to a Render service domain, and still keep `Secure=true`. |
 | `BASILICO_ADMIN_EMAIL` / `BASILICO_ADMIN_PASSWORD` / `BASILICO_ADMIN_DISPLAY_NAME` | Needed for first owner bootstrap. Remove or leave inert after the owner exists; the password is not overwritten automatically. |
@@ -170,3 +173,14 @@ Optional / development only:
 | `RATE_LIMIT_*` | Defaults are suitable for first deployment; tune after real traffic observations. |
 | `MAIL_HEALTH_ENABLED` | Keep `false` unless SMTP health should influence service health. |
 | `NEXT_PUBLIC_ENABLE_DEV_PAYMENT_CONTROL` | Admin-web development-only switch; keep unset/false in production. |
+
+## Google Cloud Run + Neon Notes
+
+Cloud Run should use the same backend variables listed above. Set
+`SPRING_PROFILES_ACTIVE=prod`, map the Neon PostgreSQL credentials into the
+existing `DB_*` variables, and keep `DB_JDBC_PARAMETERS=?sslmode=require` if
+the chosen Neon connection string requires it. Admin sessions are stored in
+Neon by Spring Session JDBC, so use `ADMIN_SESSION_TIMEOUT=365d`,
+`ADMIN_SESSION_COOKIE_MAX_AGE=365d`, `SESSION_COOKIE_SECURE=true` and
+`SESSION_COOKIE_SAME_SITE=lax` for the production admin/API same-site domain
+shape.
