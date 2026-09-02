@@ -1,17 +1,20 @@
 import { Container } from "@/components/layout/Container";
 import { HomeImageSlot } from "@/components/home/HomeImageSlot";
 import { ButtonLink } from "@/components/ui/Button";
+import {
+  BASILICO_ADDRESS,
+  BASILICO_PHONE_DISPLAY,
+  BASILICO_PHONE_HREF,
+} from "@/lib/site-config";
 
 const addressLines = [
-  "41 Trinity Street",
-  "Dorchester",
-  "Dorset",
-  "DT1 1TT",
+  BASILICO_ADDRESS.street,
+  BASILICO_ADDRESS.locality,
+  BASILICO_ADDRESS.region,
+  BASILICO_ADDRESS.postalCode,
   "United Kingdom",
 ];
 
-const phoneDisplay = "07424 642900";
-const phoneHref = "tel:07424642900";
 const mapImageSrc = "/images/location/basilico-map.webp";
 const directionsQuery =
   "41 Trinity Street, Dorchester, Dorset, DT1 1TT, United Kingdom";
@@ -33,11 +36,11 @@ export function VisitSection() {
             Basilico in Dorchester.
           </h2>
           <address className="home-visit__address">
-            Dorchester
+            41 Trinity Street, Dorchester
             <span aria-hidden="true"> · </span>
             Dorset
             <br />
-            Simple Italian on Trinity Street.
+            Simple Italian, sourdough pizza, dine in, takeaway and delivery.
           </address>
         </div>
 
@@ -66,10 +69,10 @@ export function VisitSection() {
               <dd>
                 <a
                   className="visit-detail__link"
-                  href={phoneHref}
-                  aria-label={`Call Basilico on ${phoneDisplay}`}
+                  href={BASILICO_PHONE_HREF}
+                  aria-label={`Call Basilico on ${BASILICO_PHONE_DISPLAY}`}
                 >
-                  {phoneDisplay}
+                  {BASILICO_PHONE_DISPLAY}
                 </a>
               </dd>
             </div>

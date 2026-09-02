@@ -4,14 +4,14 @@ import { HomeFooter } from "@/components/home/HomeFooter";
 import { HomeHeader } from "@/components/home/HomeHeader";
 import { MobileConversionBar } from "@/components/home/MobileConversionBar";
 import { Container } from "@/components/layout/Container";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
+  title: "Book a Table | Basilico Dorchester",
   description:
-    "Send a table booking request for Basilico, Simple Italian in Dorchester.",
-  title: {
-    absolute: "Book a Table | Basilico Dorchester",
-  },
-};
+    "Book a table at Basilico, an Italian restaurant on Trinity Street in Dorchester, Dorset.",
+  path: "/book",
+});
 
 export default function BookPage() {
   return (

@@ -1878,6 +1878,22 @@ summary:focus-visible {
   margin: 0.75rem 0 0;
 }
 
+.home-footer__contact {
+  color: var(--muted);
+  display: grid;
+  font-size: 0.8125rem;
+  font-style: normal;
+  gap: 0.35rem;
+  line-height: 1.55;
+  margin-top: 0.875rem;
+}
+
+.home-footer__contact a {
+  color: var(--surface-light);
+  text-decoration-color: color-mix(in srgb, var(--ember) 60%, transparent);
+  text-underline-offset: 0.22em;
+}
+
 .home-footer__links {
   display: grid;
   gap: 0.875rem;

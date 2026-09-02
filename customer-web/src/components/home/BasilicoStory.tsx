@@ -44,9 +44,9 @@ export function BasilicoStory() {
           <div className="home-story__copy">
             <p className="type-body">
               Basilico is our take on relaxed Italian dining in Dorchester —
-              generous pizza, comforting favourites and warm hospitality. We keep
-              things straightforward: good ingredients, familiar flavours and food
-              made with care.
+              generous sourdough pizza, comforting favourites and warm
+              hospitality. We keep things straightforward: good ingredients,
+              familiar flavours and food made with care.
             </p>
             <p className="type-body">
               Whether you are joining us at the table, collecting dinner or

@@ -14,6 +14,7 @@ import {
   isMenuApiNotFoundError,
 } from "@/lib/api/menu-api";
 import { routes } from "@/lib/routes";
+import { buildPageMetadata } from "@/lib/seo";
 import type { MenuData, MenuItem } from "@/types/menu";
 
 type ProductPageProps = {
@@ -30,28 +31,32 @@ export async function generateMetadata({
   try {
     const item = await getMenuItemBySlug(slug);
 
-    return {
-      title: {
-        absolute: `${item.name} | Basilico Dorchester`,
-      },
+    return buildPageMetadata({
+      title: `${item.name} | Basilico Dorchester`,
       description:
         item.description ??
         `View ${item.name} on the Basilico menu in Dorchester.`,
-    };
+      path: `/menu/${slug}`,
+    });
   } catch (error) {
     if (isMenuApiNotFoundError(error)) {
       return {
         title: {
           absolute: "Menu item not found | Basilico Dorchester",
         },
+        robots: {
+          index: false,
+          follow: false,
+        },
       };
     }
 
-    return {
-      title: {
-        absolute: "Basilico Menu | Dorchester",
-      },
-    };
+    return buildPageMetadata({
+      title: "Basilico Menu | Dorchester",
+      description:
+        "Browse the Basilico menu for sourdough pizza and Italian favourites in Dorchester.",
+      path: "/menu",
+    });
   }
 }
 

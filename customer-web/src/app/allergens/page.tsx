@@ -5,13 +5,14 @@ import { HomeHeader } from "@/components/home/HomeHeader";
 import { MobileConversionBar } from "@/components/home/MobileConversionBar";
 import { Container } from "@/components/layout/Container";
 import { routes } from "@/lib/routes";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  description: "Allergen guidance for Basilico customers in Dorchester.",
-  title: {
-    absolute: "Allergens | Basilico Dorchester",
-  },
-};
+export const metadata: Metadata = buildPageMetadata({
+  title: "Allergens | Basilico Dorchester",
+  description:
+    "Allergen guidance for Basilico customers ordering Italian food and pizza in Dorchester.",
+  path: "/allergens",
+});
 
 export default function AllergensPage() {
   return (

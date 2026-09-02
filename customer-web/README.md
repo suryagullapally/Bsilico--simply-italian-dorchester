@@ -13,9 +13,10 @@ NEXT_PUBLIC_API_BASE_URL=https://api.basilicodorchester.co.uk
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=<Stripe test publishable key>
 ```
 
-Use local values from `.env.example` for development. Production must provide
-the real HTTPS customer URL so canonical URLs, Open Graph metadata, robots and
-the sitemap do not point at localhost.
+Use local values from `.env.example` for development. Production should still
+provide the real HTTPS customer URL explicitly. The compiled fallback is also
+the production domain so canonical URLs, Open Graph metadata, robots and the
+sitemap do not accidentally point at localhost.
 
 `NEXT_PUBLIC_*` values are compiled into the browser bundle, so update/redeploy
 after changing them. Keep Stripe in test mode for the first deployed QA pass.
@@ -123,10 +124,20 @@ http://localhost:8025
 
 ## SEO and Public Indexing
 
-Customer-web provides basic metadata for Basilico - Simple Italian in
-Dorchester, plus `robots.txt` and `sitemap.xml` for public browsing routes.
-Basket, checkout, payment and compatibility order routes are excluded from the
-public sitemap.
+Customer-web provides route-specific metadata for Basilico - Simple Italian in
+Dorchester, including canonical URLs, Open Graph metadata, Twitter card
+metadata, branded favicon/app icons, `robots.txt`, `sitemap.xml` and
+server-rendered Restaurant JSON-LD. Public restaurant pages are included in the
+sitemap. Basket, checkout, payment and compatibility order routes are excluded
+from the public sitemap and marked `noindex`.
+
+After production deployment:
+
+1. Add `basilicodorchester.co.uk` to Google Search Console.
+2. Verify ownership using a Cloudflare DNS TXT record.
+3. Submit `https://basilicodorchester.co.uk/sitemap.xml`.
+4. Request indexing for `/`, `/menu` and `/book`.
+5. Test Restaurant structured data with Google's Rich Results Test.
 
 Security headers include content-type protection, frame denial, a conservative
 referrer policy, blocked camera/microphone permissions and same-origin
@@ -153,7 +164,7 @@ The page auto-updates as you edit files in `src/`.
 
 ```bash
 npm run lint
-npm run build
+npm run build:vinext
 ```
 
 ## Learn More

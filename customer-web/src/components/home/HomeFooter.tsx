@@ -2,6 +2,11 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Container } from "@/components/layout/Container";
 import { routes } from "@/lib/routes";
+import {
+  BASILICO_ADDRESS,
+  BASILICO_PHONE_DISPLAY,
+  BASILICO_PHONE_HREF,
+} from "@/lib/site-config";
 
 const footerLinks = [
   { href: routes.menu, label: "Menu" },
@@ -21,8 +26,17 @@ export function HomeFooter() {
             <BrandLogo className="home-footer__logo" sizes="8rem" />
           </Link>
           <p className="type-small home-footer__location">
-            Dorchester &middot; Dorset
+            Italian restaurant in Dorchester, Dorset
           </p>
+          <address className="home-footer__contact">
+            <span>
+              {BASILICO_ADDRESS.street}, {BASILICO_ADDRESS.locality}{" "}
+              {BASILICO_ADDRESS.postalCode}
+            </span>
+            <a href={BASILICO_PHONE_HREF}>{BASILICO_PHONE_DISPLAY}</a>
+            <span>Wednesday - Monday 12:00 - 23:00</span>
+            <span>Tuesday closed</span>
+          </address>
         </div>
 
         <nav className="home-footer__links" aria-label="Footer navigation">

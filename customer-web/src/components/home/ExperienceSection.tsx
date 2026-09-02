@@ -7,7 +7,7 @@ const experiences = [
   {
     alt: "Basilico dining room prepared for restaurant guests",
     cta: "Book a Table",
-    description: "Book a table and enjoy Basilico in the restaurant.",
+    description: "Book a table and enjoy Basilico's Italian restaurant on Trinity Street.",
     href: routes.book,
     imageSrc: "/images/restaurant/interior-01.webp",
     label: "Dine with us",
@@ -15,7 +15,7 @@ const experiences = [
   {
     alt: "Basilico Italian food prepared for ordering",
     cta: "Order Online",
-    description: "Enjoy Basilico at home with delivery or collection.",
+    description: "Enjoy Basilico at home with Dorchester takeaway or delivery.",
     href: routes.order,
     imageSrc: "/images/home/order-basilico.webp",
     label: "Order Basilico",

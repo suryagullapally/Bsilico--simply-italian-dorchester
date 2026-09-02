@@ -27,7 +27,8 @@ export function MenuPage({ menu }: MenuPageProps) {
               Choose your favourite.
             </h1>
             <p className="type-body menu-intro__copy">
-              From pizza and Italian favourites to something sweet.
+              From sourdough pizza and Italian favourites to something sweet,
+              available for Dorchester takeaway and delivery.
             </p>
           </Container>
         </section>

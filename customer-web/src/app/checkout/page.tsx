@@ -4,14 +4,15 @@ import { HomeFooter } from "@/components/home/HomeFooter";
 import { HomeHeader } from "@/components/home/HomeHeader";
 import { MobileConversionBar } from "@/components/home/MobileConversionBar";
 import { Container } from "@/components/layout/Container";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
+  title: "Checkout | Basilico Dorchester",
   description:
     "Review your Basilico order details for delivery or collection before payment.",
-  title: {
-    absolute: "Checkout | Basilico Dorchester",
-  },
-};
+  path: "/checkout",
+  noindex: true,
+});
 
 export default function CheckoutPage() {
   return (

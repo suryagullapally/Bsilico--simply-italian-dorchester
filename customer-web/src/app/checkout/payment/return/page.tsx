@@ -4,13 +4,14 @@ import { HomeFooter } from "@/components/home/HomeFooter";
 import { HomeHeader } from "@/components/home/HomeHeader";
 import { MobileConversionBar } from "@/components/home/MobileConversionBar";
 import { Container } from "@/components/layout/Container";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
+  title: "Payment Status | Basilico Dorchester",
   description: "Check the payment status for your Basilico order.",
-  title: {
-    absolute: "Payment Status | Basilico Dorchester",
-  },
-};
+  path: "/checkout/payment/return",
+  noindex: true,
+});
 
 type CheckoutPaymentReturnPageProps = {
   searchParams?: Promise<{

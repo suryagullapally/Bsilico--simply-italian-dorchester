@@ -5,13 +5,14 @@ import { HomeHeader } from "@/components/home/HomeHeader";
 import { MobileConversionBar } from "@/components/home/MobileConversionBar";
 import { Container } from "@/components/layout/Container";
 import { routes } from "@/lib/routes";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  description: "Privacy information for the Basilico customer website.",
-  title: {
-    absolute: "Privacy | Basilico Dorchester",
-  },
-};
+export const metadata: Metadata = buildPageMetadata({
+  title: "Privacy | Basilico Dorchester",
+  description:
+    "Privacy information for the Basilico customer website, online ordering and table booking.",
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   return (

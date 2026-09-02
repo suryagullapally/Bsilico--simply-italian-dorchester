@@ -12,15 +12,15 @@ import {
   isMenuApiNotFoundError,
 } from "@/lib/api/menu-api";
 import { routes } from "@/lib/routes";
+import { buildPageMetadata } from "@/lib/seo";
 import type { CreateYourOwnConfiguration } from "@/types/menu";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
+  title: "Create Your Own Pizza | Basilico Dorchester",
   description:
     "Create your own Basilico sourdough pizza with extra toppings from the Basilico menu in Dorchester.",
-  title: {
-    absolute: "Create Your Own Pizza | Basilico Dorchester",
-  },
-};
+  path: "/menu/create-your-own",
+});
 
 export const dynamic = "force-dynamic";
 

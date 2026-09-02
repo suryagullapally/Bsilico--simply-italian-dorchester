@@ -9,7 +9,7 @@ This audit covers hardcoded `localhost:3000`, `localhost:3001`,
 | --- | --- | --- |
 | `backend/src/main/resources/application.yml` | Safe development fallback | Local CORS and customer return URL defaults. Production uses `SPRING_PROFILES_ACTIVE=prod` plus explicit Render env vars. |
 | `customer-web/src/lib/api/config.ts` | Safe development fallback | Defaults API calls to local backend only when `NEXT_PUBLIC_API_BASE_URL` is absent. Vercel production must set the env var. |
-| `customer-web/src/lib/site-config.ts` | Safe development fallback | Defaults metadata base URL to local customer-web only when `NEXT_PUBLIC_SITE_URL` is absent. Vercel production must set the env var. |
+| `customer-web/src/lib/site-config.ts` | Production-safe metadata fallback | Defaults metadata base URL to `https://basilicodorchester.co.uk` when `NEXT_PUBLIC_SITE_URL` is absent. Production should still set the env var explicitly. |
 | `admin-web/src/lib/api/config.ts` | Safe development fallback | Defaults API/customer links to local services only when Vercel env vars are absent. Vercel production must set both env vars. |
 
 ## Environment Examples

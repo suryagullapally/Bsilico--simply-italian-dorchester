@@ -4,14 +4,15 @@ import { HomeHeader } from "@/components/home/HomeHeader";
 import { MobileConversionBar } from "@/components/home/MobileConversionBar";
 import { Container } from "@/components/layout/Container";
 import { PaymentPageContent } from "@/components/checkout/PaymentPageContent";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
+  title: "Payment | Basilico Dorchester",
   description:
     "Complete secure online payment for your Basilico order.",
-  title: {
-    absolute: "Payment | Basilico Dorchester",
-  },
-};
+  path: "/checkout/payment",
+  noindex: true,
+});
 
 type CheckoutPaymentPageProps = {
   searchParams?: Promise<{
