@@ -15,8 +15,8 @@ Database:
 | `DB_USER` | Yes | Production database user. |
 | `DB_PASSWORD` | Yes | Production database password. |
 | `DB_JDBC_PARAMETERS` | Maybe | Optional JDBC suffix such as `?sslmode=require` if the PostgreSQL provider requires TLS parameters. Leave blank for local Docker. |
-| `DB_POOL_MAX_SIZE` | No | Defaults to `10` in prod profile. |
-| `DB_POOL_MIN_IDLE` | No | Defaults to `2` in prod profile. |
+| `DB_POOL_MAX_SIZE` | No | Defaults to `5` in prod profile. |
+| `DB_POOL_MIN_IDLE` | No | Defaults to `0` in prod profile. |
 | `DB_CONNECTION_TIMEOUT_MS` | No | Defaults to `30000`. |
 | `DB_VALIDATION_TIMEOUT_MS` | No | Defaults to `5000`. |
 | `DB_MAX_LIFETIME_MS` | No | Defaults to `1800000`. |
@@ -28,6 +28,7 @@ Backend URLs and CORS:
 | `PORT` | Render sets this | Render web services provide this automatically. Spring Boot reads it before `SERVER_PORT`. |
 | `SERVER_PORT` | No | Local/manual override. Defaults to `8080` when `PORT` is absent. |
 | `CUSTOMER_WEB_BASE_URL` | Yes | Customer HTTPS origin used for Stripe return URLs. |
+| `ADMIN_WEB_BASE_URL` | No | Admin HTTPS origin used in internal staff alert links. Defaults to the local admin URL in development and the Basilico admin domain in prod. |
 | `BASILICO_CORS_ALLOWED_ORIGINS` | Yes | Comma-separated explicit customer/admin origins. Never use `*`. |
 
 Admin authentication:
@@ -68,6 +69,7 @@ SMTP email:
 | `MAIL_RETRY_DELAY_MS` | No | Defaults to `30000`. |
 | `MAIL_INITIAL_DELAY_MS` | No | Defaults to `5000`. |
 | `MAIL_HEALTH_ENABLED` | No | Defaults to `false`; enable only if SMTP health should affect readiness. |
+| `BASILICO_ORDER_ALERT_EMAIL` | Recommended before taking real payments | Internal restaurant recipient for new paid-order alerts. For Basilico production, set this to `basilico2912@gmail.com`. If absent, customer payments still succeed and the missing alert configuration is logged. |
 
 Delivery/geocoding:
 

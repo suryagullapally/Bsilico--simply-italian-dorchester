@@ -3,6 +3,10 @@ package com.basilico.backend.fulfilment.service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -10,6 +14,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.basilico.backend.common.RestaurantSchedule;
 import com.basilico.backend.common.error.BadRequestException;
 import com.basilico.backend.common.error.ConflictException;
 import com.basilico.backend.common.error.ResourceNotFoundException;
@@ -20,6 +25,8 @@ import com.basilico.backend.fulfilment.dto.DeliveryPostcodeRuleResponse;
 import com.basilico.backend.fulfilment.dto.DeliveryQuoteRequest;
 import com.basilico.backend.fulfilment.dto.DeliveryQuoteResponse;
 import com.basilico.backend.fulfilment.dto.FulfilmentOptionsResponse;
+import com.basilico.backend.fulfilment.dto.OrderAvailabilityDateResponse;
+import com.basilico.backend.fulfilment.dto.OrderAvailabilityResponse;
 import com.basilico.backend.fulfilment.dto.PostcodeRuleActiveUpdateRequest;
 import com.basilico.backend.fulfilment.dto.UpdateFulfilmentSettingsRequest;
 import com.basilico.backend.fulfilment.entity.DeliveryAreaMode;
@@ -52,19 +59,22 @@ public class FulfilmentService {
 	private final RouteDurationProvider routeDurationProvider;
 	private final DeliveryDistanceCalculator distanceCalculator;
 	private final DeliveryFeeCalculator feeCalculator;
+	private final RestaurantSchedule restaurantSchedule;
 
 	public FulfilmentService(FulfilmentSettingsRepository settingsRepository,
 			DeliveryPostcodeRuleRepository postcodeRuleRepository,
 			PostcodeGeocoder postcodeGeocoder,
 			RouteDurationProvider routeDurationProvider,
 			DeliveryDistanceCalculator distanceCalculator,
-			DeliveryFeeCalculator feeCalculator) {
+			DeliveryFeeCalculator feeCalculator,
+			RestaurantSchedule restaurantSchedule) {
 		this.settingsRepository = settingsRepository;
 		this.postcodeRuleRepository = postcodeRuleRepository;
 		this.postcodeGeocoder = postcodeGeocoder;
 		this.routeDurationProvider = routeDurationProvider;
 		this.distanceCalculator = distanceCalculator;
 		this.feeCalculator = feeCalculator;
+		this.restaurantSchedule = restaurantSchedule;
 	}
 
 	@Transactional(readOnly = true)
@@ -523,8 +533,67 @@ public class FulfilmentService {
 				settings.getDeliveryPricingMode(),
 				settings.getBaseDeliveryRadiusMiles(),
 				settings.getBaseDeliveryFeePence(),
-				settings.getExtraMileFeePence()
+				settings.getExtraMileFeePence(),
+				toOrderAvailability()
 		);
+	}
+
+	private OrderAvailabilityResponse toOrderAvailability() {
+		Optional<RestaurantSchedule.OrderSlot> nextSlot = restaurantSchedule.nextValidScheduledSlot();
+		return new OrderAvailabilityResponse(
+				RestaurantSchedule.RESTAURANT_TIMEZONE,
+				restaurantSchedule.isOpenNow(),
+				restaurantSchedule.isAsapAvailableNow(),
+				nextSlot.map(slot -> slot.date().toString()).orElse(null),
+				nextSlot.map(slot -> formatTime(slot.time())).orElse(null),
+				nextSlot.map(slot -> slot.atRestaurantTime().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
+						.orElse(null),
+				toOrderAvailabilityMessage(nextSlot),
+				restaurantSchedule.validOrderDates()
+						.stream()
+						.map(this::toOrderAvailabilityDate)
+						.toList()
+		);
+	}
+
+	private OrderAvailabilityDateResponse toOrderAvailabilityDate(LocalDate date) {
+		return new OrderAvailabilityDateResponse(
+				date.toString(),
+				date.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.UK)
+						+ " " + date.getDayOfMonth()
+						+ " " + date.getMonth().getDisplayName(TextStyle.SHORT, Locale.UK),
+				restaurantSchedule.validScheduledSlots(date)
+						.stream()
+						.map(this::formatTime)
+						.toList()
+		);
+	}
+
+	private String toOrderAvailabilityMessage(Optional<RestaurantSchedule.OrderSlot> nextSlot) {
+		if (restaurantSchedule.isAsapAvailableNow()) {
+			return null;
+		}
+
+		return nextSlot
+				.map(slot -> {
+					if (slot.date().equals(restaurantSchedule.currentDate())) {
+						return "You can still order for later. Earliest available today is " + formatTime(slot.time())
+								+ ".";
+					}
+					if (restaurantSchedule.currentDate().getDayOfWeek() == java.time.DayOfWeek.TUESDAY) {
+						return "Basilico is closed today. You can still order for later. Next available: "
+								+ slot.date().getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.UK)
+								+ " " + formatTime(slot.time()) + ".";
+					}
+					return "You can still order for later. Next available: "
+							+ slot.date().getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.UK)
+							+ " " + formatTime(slot.time()) + ".";
+				})
+				.orElse("Please choose collection or try again later.");
+	}
+
+	private String formatTime(LocalTime time) {
+		return time.format(DateTimeFormatter.ofPattern("HH:mm"));
 	}
 
 	private AdminFulfilmentSettingsResponse toAdminSettings(FulfilmentSettings settings) {

@@ -128,6 +128,58 @@ public class NotificationTemplateService {
 				""".formatted(order.getCustomerFirstName(), order.getOrderReference(), paymentLine, PHONE, BRAND));
 	}
 
+	public EmailContent restaurantNewOrder(CustomerOrder order, String adminOrderUrl) {
+		String subject = "NEW BASILICO ORDER - " + order.getOrderReference() + " - "
+				+ formatPence(order.getTotalPence());
+		String text = """
+				NEW ORDER
+
+				Order reference: %s
+				Paid status: %s
+				Order status: %s
+
+				FULFILMENT: %s
+				Requested fulfilment: %s
+
+				Customer:
+				%s %s
+				%s
+				%s
+
+				%s
+
+				%s
+
+				Food subtotal: %s
+				Delivery fee: %s
+				TOTAL: %s
+
+				Order notes / allergy notes:
+				%s
+
+				Admin link:
+				%s
+				""".formatted(
+				order.getOrderReference(),
+				order.getPaymentStatus(),
+				order.getStatus(),
+				order.getFulfilmentType(),
+				formatOrderTiming(order),
+				order.getCustomerFirstName(),
+				order.getCustomerLastName(),
+				order.getCustomerPhone(),
+				order.getCustomerEmail(),
+				formatRestaurantFulfilmentDetails(order),
+				formatOrderItems(order),
+				formatPence(order.getSubtotalPence()),
+				order.getDeliveryFeePence() == 0 ? "Free" : formatPence(order.getDeliveryFeePence()),
+				formatPence(order.getTotalPence()),
+				order.getOrderNotes() == null ? "No notes supplied." : order.getOrderNotes(),
+				adminOrderUrl
+		);
+		return content(subject, text);
+	}
+
 	public EmailContent bookingRequestReceived(Booking booking) {
 		return content("We've received your booking request", """
 				Hi %s,
@@ -286,6 +338,36 @@ public class NotificationTemplateService {
 		}
 
 		return "Estimated delivery: approximately " + order.getEstimatedDeliveryMinutes() + " minutes.";
+	}
+
+	private String formatRestaurantFulfilmentDetails(CustomerOrder order) {
+		if (order.getFulfilmentType() == FulfilmentType.COLLECTION) {
+			return "Collection from:\n" + RESTAURANT_ADDRESS;
+		}
+
+		StringBuilder builder = new StringBuilder("Delivery address:\n")
+				.append(formatDeliveryAddress(order));
+		if (order.getDeliveryDistanceMiles() != null) {
+			builder.append("\nDelivery distance: ")
+					.append(order.getDeliveryDistanceMiles().setScale(1, java.math.RoundingMode.HALF_UP))
+					.append(" miles");
+		}
+		if (order.getDeliveryPreparationMinutes() != null) {
+			builder.append("\nPreparation: ")
+					.append(order.getDeliveryPreparationMinutes())
+					.append(" mins");
+		}
+		if (order.getDeliveryTravelMinutes() != null) {
+			builder.append("\nEstimated drive: ")
+					.append(order.getDeliveryTravelMinutes())
+					.append(" mins");
+		}
+		if (order.getEstimatedDeliveryMinutes() != null) {
+			builder.append("\nEstimated delivery: approximately ")
+					.append(order.getEstimatedDeliveryMinutes())
+					.append(" mins");
+		}
+		return builder.toString();
 	}
 
 	private String formatDate(Booking booking) {

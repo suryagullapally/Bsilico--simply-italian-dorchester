@@ -270,12 +270,16 @@ MAIL_FROM_NAME=Basilico - Simple Italian
 MAIL_SMTP_AUTH=true
 MAIL_SMTP_STARTTLS=true
 MAIL_WORKER_ENABLED=true
+BASILICO_ORDER_ALERT_EMAIL=
+ADMIN_WEB_BASE_URL=https://admin.basilicodorchester.co.uk
 ```
 
 Verify:
 
 - sender address/domain is verified with the SMTP provider
+- `BASILICO_ORDER_ALERT_EMAIL` is set to `basilico2912@gmail.com`
 - test order/booking emails arrive
+- paid customer orders also create the internal restaurant new-order alert
 - failed notifications are recorded and retryable
 - Mailpit is not used in production
 

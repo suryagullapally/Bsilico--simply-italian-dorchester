@@ -56,6 +56,9 @@ basilico:
       from-email: ${MAIL_FROM_EMAIL:}
       from-name: ${MAIL_FROM_NAME:Basilico - Simple Italian}
       worker-enabled: ${MAIL_WORKER_ENABLED:true}
+    restaurant:
+      order-alert-email: ${BASILICO_ORDER_ALERT_EMAIL:}
+      admin-base-url: ${ADMIN_WEB_BASE_URL:https://admin.basilicodorchester.co.uk}
   delivery:
     postcodes-io:
       base-url: ${POSTCODES_IO_BASE_URL:https://api.postcodes.io}

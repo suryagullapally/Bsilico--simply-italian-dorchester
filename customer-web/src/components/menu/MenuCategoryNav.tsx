@@ -98,7 +98,7 @@ export function MenuCategoryNav({ categories }: MenuCategoryNavProps) {
   }
 
   return (
-    <nav className="menu-category-nav" aria-label="Menu categories">
+    <nav className="menu-category-nav" id="menu-categories" aria-label="Menu categories">
       <div className="site-container menu-category-nav__container">
         <div className="menu-category-nav__rail">
           {categories.map((category) => {

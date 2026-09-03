@@ -2,6 +2,8 @@ package com.basilico.backend.notification.service;
 
 import java.util.Objects;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -25,12 +27,15 @@ import com.basilico.backend.notification.entity.NotificationType;
 import com.basilico.backend.notification.repository.CustomerNotificationRepository;
 import com.basilico.backend.order.entity.CustomerOrder;
 import com.basilico.backend.order.entity.OrderStatus;
+import com.basilico.backend.order.entity.PaymentStatus;
 import com.basilico.backend.order.repository.CustomerOrderRepository;
 
 @Service
 public class CustomerNotificationService {
 
+	private static final Logger logger = LoggerFactory.getLogger(CustomerNotificationService.class);
 	private static final int MAX_ADMIN_PAGE_SIZE = 100;
+	private static final String RESTAURANT_RECIPIENT_NAME = "Basilico team";
 
 	private final CustomerNotificationRepository notificationRepository;
 	private final CustomerOrderRepository orderRepository;
@@ -38,27 +43,54 @@ public class CustomerNotificationService {
 	private final NotificationTemplateService templateService;
 	private final NotificationDeliveryService deliveryService;
 	private final TransactionTemplate transactionTemplate;
+	private final RestaurantNotificationProperties restaurantNotificationProperties;
 
 	public CustomerNotificationService(CustomerNotificationRepository notificationRepository,
 			CustomerOrderRepository orderRepository,
 			BookingRepository bookingRepository,
 			NotificationTemplateService templateService,
 			NotificationDeliveryService deliveryService,
-			TransactionTemplate transactionTemplate) {
+			TransactionTemplate transactionTemplate,
+			RestaurantNotificationProperties restaurantNotificationProperties) {
 		this.notificationRepository = notificationRepository;
 		this.orderRepository = orderRepository;
 		this.bookingRepository = bookingRepository;
 		this.templateService = templateService;
 		this.deliveryService = deliveryService;
 		this.transactionTemplate = transactionTemplate;
+		this.restaurantNotificationProperties = restaurantNotificationProperties;
 	}
 
 	public void queueOrderReceived(CustomerOrder order) {
-		if (order.getStatus() != OrderStatus.NEW) {
+		if (order.getStatus() != OrderStatus.NEW || order.getPaymentStatus() != PaymentStatus.PAID) {
 			return;
 		}
 		queueAutomaticOrderNotification(NotificationType.ORDER_RECEIVED, order,
 				templateService.orderReceived(order));
+	}
+
+	public void queueRestaurantNewOrderAlert(CustomerOrder order) {
+		if (order.getStatus() != OrderStatus.NEW) {
+			return;
+		}
+
+		if (!restaurantNotificationProperties.hasOrderAlertEmail()) {
+			logger.warn("Restaurant new-order alert email is not configured; order {} was still paid and accepted.",
+					order.getOrderReference());
+			return;
+		}
+
+		EmailContent content = templateService.restaurantNewOrder(
+				order,
+				restaurantNotificationProperties.adminOrderUrl(order.getId())
+		);
+		queueAutomaticOrderNotification(
+				NotificationType.RESTAURANT_NEW_ORDER,
+				order,
+				restaurantNotificationProperties.normalizedOrderAlertEmail(),
+				RESTAURANT_RECIPIENT_NAME,
+				content
+		);
 	}
 
 	public void queueOrderStatusNotification(CustomerOrder order, OrderStatus previousStatus) {
@@ -140,6 +172,17 @@ public class CustomerNotificationService {
 	}
 
 	private void queueAutomaticOrderNotification(NotificationType type, CustomerOrder order, EmailContent content) {
+		queueAutomaticOrderNotification(
+				type,
+				order,
+				order.getCustomerEmail(),
+				customerName(order.getCustomerFirstName(), order.getCustomerLastName()),
+				content
+		);
+	}
+
+	private void queueAutomaticOrderNotification(NotificationType type, CustomerOrder order,
+			String recipientEmail, String recipientName, EmailContent content) {
 		String deduplicationKey = type.name() + ":" + order.getId();
 		if (notificationRepository.findByDeduplicationKey(deduplicationKey).isPresent()) {
 			return;
@@ -148,8 +191,8 @@ public class CustomerNotificationService {
 		CustomerNotification notification = notificationRepository.saveAndFlush(new CustomerNotification(
 				type,
 				order,
-				order.getCustomerEmail(),
-				customerName(order.getCustomerFirstName(), order.getCustomerLastName()),
+				recipientEmail,
+				recipientName,
 				content.subject(),
 				content.text(),
 				content.html(),

@@ -33,8 +33,8 @@ export function MenuPage({ menu }: MenuPageProps) {
           </Container>
         </section>
 
-        <MenuCategoryNav categories={menu.categories} />
         <MenuDeliveryStatus />
+        <MenuCategoryNav categories={menu.categories} />
         <MenuDietaryLegend items={dietaryLegend} />
 
         <Container className="menu-sections">

@@ -1,7 +1,6 @@
 package com.basilico.backend.order.service;
 
 import java.security.SecureRandom;
-import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -71,6 +70,7 @@ public class OrderService {
 	private final ManualPaymentStatusProperties manualPaymentStatusProperties;
 	private final FulfilmentService fulfilmentService;
 	private final CustomerNotificationService notificationService;
+	private final RestaurantSchedule restaurantSchedule;
 	private final SecureRandom secureRandom = new SecureRandom();
 
 	public OrderService(CustomerOrderRepository orderRepository, MenuItemRepository menuItemRepository,
@@ -78,7 +78,8 @@ public class OrderService {
 			PaymentAttemptRepository paymentAttemptRepository,
 			ManualPaymentStatusProperties manualPaymentStatusProperties,
 			FulfilmentService fulfilmentService,
-			CustomerNotificationService notificationService) {
+			CustomerNotificationService notificationService,
+			RestaurantSchedule restaurantSchedule) {
 		this.orderRepository = orderRepository;
 		this.menuItemRepository = menuItemRepository;
 		this.customizerRepository = customizerRepository;
@@ -87,6 +88,7 @@ public class OrderService {
 		this.manualPaymentStatusProperties = manualPaymentStatusProperties;
 		this.fulfilmentService = fulfilmentService;
 		this.notificationService = notificationService;
+		this.restaurantSchedule = restaurantSchedule;
 	}
 
 	@Transactional
@@ -172,6 +174,10 @@ public class OrderService {
 
 	private void validateTiming(OrderTimingRequest timing) {
 		if (timing.type() == TimingType.ASAP) {
+			if (!restaurantSchedule.isAsapAvailableNow()) {
+				throw new BadRequestException(
+						"Basilico is currently closed. Please choose an available order time.");
+			}
 			return;
 		}
 
@@ -183,20 +189,10 @@ public class OrderService {
 			throw new BadRequestException("Scheduled orders require a requested date and time");
 		}
 
-		if (timing.requestedDate().isBefore(LocalDate.now())) {
-			throw new BadRequestException("Scheduled order date cannot be in the past");
-		}
-
-		if (RestaurantSchedule.isClosed(timing.requestedDate())) {
-			throw new BadRequestException("Basilico is closed on Tuesdays");
-		}
-
-		if (!RestaurantSchedule.isWithinRequestWindow(timing.requestedTime())) {
-			throw new BadRequestException("Requested order time must be between 12:00 and 22:45");
-		}
-
-		if (!RestaurantSchedule.isFifteenMinuteInterval(timing.requestedTime())) {
-			throw new BadRequestException("Requested order time must use 15-minute intervals");
+		RestaurantSchedule.ScheduleValidation validation =
+				restaurantSchedule.validateScheduledOrder(timing.requestedDate(), timing.requestedTime());
+		if (!validation.valid()) {
+			throw new BadRequestException(validation.message());
 		}
 	}
 
@@ -332,7 +328,8 @@ public class OrderService {
 
 	private String generateOrderReference() {
 		for (int attempt = 0; attempt < 10; attempt++) {
-			String reference = "BAS-" + LocalDate.now().format(REFERENCE_DATE_FORMAT) + "-" + randomReferenceSuffix();
+			String reference = "BAS-" + restaurantSchedule.currentDate().format(REFERENCE_DATE_FORMAT) + "-"
+					+ randomReferenceSuffix();
 			if (!orderRepository.existsByOrderReference(reference)) {
 				return reference;
 			}

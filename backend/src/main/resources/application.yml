@@ -97,6 +97,9 @@ basilico:
       worker-enabled: ${MAIL_WORKER_ENABLED:true}
       retry-delay-ms: ${MAIL_RETRY_DELAY_MS:30000}
       initial-delay-ms: ${MAIL_INITIAL_DELAY_MS:5000}
+    restaurant:
+      order-alert-email: ${BASILICO_ORDER_ALERT_EMAIL:}
+      admin-base-url: ${ADMIN_WEB_BASE_URL:http://localhost:3002}
   delivery:
     postcodes-io:
       base-url: ${POSTCODES_IO_BASE_URL:https://api.postcodes.io}

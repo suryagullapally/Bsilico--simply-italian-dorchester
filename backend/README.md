@@ -55,6 +55,7 @@ RATE_LIMIT_ADMIN_LOGIN_LIMIT=10
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
 CUSTOMER_WEB_BASE_URL=http://localhost:3000
+ADMIN_WEB_BASE_URL=http://localhost:3002
 BASILICO_ALLOW_MANUAL_PAYMENT_STATUS=false
 MAIL_HOST=localhost
 MAIL_PORT=1025
@@ -70,6 +71,7 @@ MAIL_WORKER_ENABLED=true
 MAIL_RETRY_DELAY_MS=30000
 MAIL_INITIAL_DELAY_MS=5000
 MAIL_HEALTH_ENABLED=false
+BASILICO_ORDER_ALERT_EMAIL=
 POSTCODES_IO_BASE_URL=https://api.postcodes.io
 POSTCODES_IO_TIMEOUT_MS=2500
 POSTCODES_IO_CACHE_TTL_SECONDS=86400
@@ -445,6 +447,24 @@ Slugs are editable on create only for this first admin API. Existing item slugs 
 }
 ```
 
+Order timing is validated by the backend using Basilico's authoritative
+restaurant schedule:
+
+- timezone: `Europe/London`
+- Monday, Wednesday, Thursday, Friday, Saturday and Sunday: `12:00-23:00`
+- Tuesday: closed
+- final order/request slot: `22:45`
+- scheduled slots: 15-minute intervals
+
+`ASAP` is accepted only while Basilico is inside the current order window in
+`Europe/London`. Customers can still build a basket while closed, but they must
+choose a valid scheduled slot. Today's scheduled slots that have already passed
+are rejected by the backend even if a stale browser page submits them.
+
+`GET /api/fulfilment/options` includes an `orderAvailability` block with the
+current restaurant timezone, open/closed ordering state, next available slot and
+date-specific scheduled slots for the customer checkout UI.
+
 For delivery orders, include:
 
 ```json
@@ -618,6 +638,8 @@ MAIL_SMTP_STARTTLS=true
 MAIL_MAX_ATTEMPTS=3
 MAIL_WORKER_ENABLED=true
 MAIL_HEALTH_ENABLED=false
+BASILICO_ORDER_ALERT_EMAIL=
+ADMIN_WEB_BASE_URL=https://admin.basilicodorchester.co.uk
 ```
 
 Email delivery follows an outbox-style lifecycle:
@@ -638,6 +660,8 @@ Automatic notification triggers:
 - `ORDER_ACCEPTED`: when Admin changes an order to `ACCEPTED`.
 - `ORDER_READY`: when Admin changes an order to `READY`.
 - `ORDER_CANCELLED`: when Admin changes an order to `CANCELLED`.
+- `RESTAURANT_NEW_ORDER`: internal restaurant alert only after Stripe webhook
+  verification marks an order `PAID` and moves it to `NEW`.
 - `BOOKING_REQUEST_RECEIVED`: after a public booking request is stored as
   `REQUESTED`.
 - `BOOKING_CONFIRMED`, `BOOKING_DECLINED`, `BOOKING_CANCELLED`: when Admin
@@ -647,6 +671,13 @@ Automatic messages use deterministic deduplication keys such as
 `ORDER_RECEIVED:<order-id>` so webhook retries, repeated status saves and app
 restarts do not send duplicate customer emails. Manual admin messages are
 independent and are recorded separately.
+
+The internal restaurant alert uses its own deduplication key,
+`RESTAURANT_NEW_ORDER:<order-id>`, and is sent to `BASILICO_ORDER_ALERT_EMAIL`.
+For Basilico production, set `BASILICO_ORDER_ALERT_EMAIL=basilico2912@gmail.com`.
+If that variable is missing, payment and order status changes still succeed; the
+configuration issue is logged and can be fixed without reversing the customer
+payment.
 
 Emails are plain text plus simple HTML multipart messages. They include Basilico
 context, order or booking references, and customer-facing status truth. They do

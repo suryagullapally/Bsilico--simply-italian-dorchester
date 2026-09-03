@@ -18,6 +18,7 @@ public record FulfilmentOptionsResponse(
 		DeliveryPricingMode deliveryPricingMode,
 		BigDecimal baseDeliveryRadiusMiles,
 		Integer baseDeliveryFeePence,
-		Integer extraMileFeePence
+		Integer extraMileFeePence,
+		OrderAvailabilityResponse orderAvailability
 ) {
 }

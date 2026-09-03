@@ -277,6 +277,7 @@ public class PaymentService {
 
 		if (previousPaymentStatus != PaymentStatus.PAID && order.getStatus() == OrderStatus.NEW) {
 			notificationService.queueOrderReceived(order);
+			notificationService.queueRestaurantNewOrderAlert(order);
 		}
 	}
 

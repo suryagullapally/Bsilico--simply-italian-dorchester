@@ -61,6 +61,7 @@ production environment.
 - [ ] sender domain/address verified
 - [ ] SMTP credentials configured
 - [ ] order received email QA completed
+- [ ] internal paid-order alert email QA completed
 - [ ] booking request email QA completed
 - [ ] admin manual email QA completed
 - [ ] failed notification retry QA completed

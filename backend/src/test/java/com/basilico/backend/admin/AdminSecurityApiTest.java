@@ -381,14 +381,16 @@ class AdminSecurityApiTest {
 				    "email": "john@example.com"
 				  },
 				  "timing": {
-				    "type": "ASAP"
+				    "type": "SCHEDULED",
+				    "requestedDate": "%s",
+				    "requestedTime": "18:30"
 				  },
 				  "notes": "",
 				  "items": [
 				    { "type": "MENU_ITEM", "menuItemId": %d, "quantity": 1 }
 				  ]
 				}
-				""".formatted(menuItemId);
+				""".formatted(nextOpenDate(), menuItemId);
 	}
 
 	private String bookingPayload(LocalDate date) {

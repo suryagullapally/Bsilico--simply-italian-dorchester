@@ -11,6 +11,8 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -570,12 +572,14 @@ class OrderApiTest {
 				    "email": "john@example.com"
 				  },
 				  "timing": {
-				    "type": "ASAP"
+				    "type": "SCHEDULED",
+				    "requestedDate": "%s",
+				    "requestedTime": "18:30"
 				  },
 				  "notes": "No onions please",
 				  "items": %s
 				}
-				""".formatted(itemsJson);
+				""".formatted(nextOpenDate(), itemsJson);
 	}
 
 	private String deliveryOrderPayload(String itemsJson, String postcode) {
@@ -594,12 +598,22 @@ class OrderApiTest {
 				    "postcode": "%s"
 				  },
 				  "timing": {
-				    "type": "ASAP"
+				    "type": "SCHEDULED",
+				    "requestedDate": "%s",
+				    "requestedTime": "18:30"
 				  },
 				  "notes": "No onions please",
 				  "items": %s
 				}
-				""".formatted(postcode, itemsJson);
+				""".formatted(postcode, nextOpenDate(), itemsJson);
+	}
+
+	private LocalDate nextOpenDate() {
+		LocalDate date = LocalDate.now().plusDays(1);
+		while (date.getDayOfWeek() == DayOfWeek.TUESDAY) {
+			date = date.plusDays(1);
+		}
+		return date;
 	}
 
 	private void enableDelivery(int deliveryFeePence, Integer minimumDeliveryOrderPence,

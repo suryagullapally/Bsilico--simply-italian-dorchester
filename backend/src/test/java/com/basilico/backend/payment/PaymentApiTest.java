@@ -18,6 +18,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.List;
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.Optional;
 
 import com.jayway.jsonpath.JsonPath;
@@ -66,7 +68,7 @@ import com.basilico.backend.payment.stripe.StripeCheckoutSessionData;
 import com.basilico.backend.payment.stripe.StripeLineItem;
 import com.basilico.backend.payment.stripe.StripeWebhookEventData;
 
-@SpringBootTest
+@SpringBootTest(properties = "basilico.notifications.restaurant.order-alert-email=basilico2912@gmail.com")
 @AutoConfigureMockMvc
 @Transactional
 class PaymentApiTest {
@@ -349,6 +351,15 @@ class PaymentApiTest {
 		assertThat(notificationRepository.findAll())
 				.filteredOn(notification -> notification.getNotificationType() == NotificationType.ORDER_RECEIVED)
 				.hasSize(1);
+		assertThat(notificationRepository.findAll())
+				.filteredOn(notification -> notification.getNotificationType() == NotificationType.RESTAURANT_NEW_ORDER)
+				.hasSize(1)
+				.first()
+				.satisfies(notification -> {
+					assertThat(notification.getRecipientEmail()).isEqualTo("basilico2912@gmail.com");
+					assertThat(notification.getSubject()).contains(orderReference);
+					assertThat(notification.getBodyText()).contains("NEW ORDER", "COLLECTION", "Admin link:");
+				});
 	}
 
 	@Test
@@ -395,6 +406,9 @@ class PaymentApiTest {
 		assertThat(notificationRepository.findAll())
 				.filteredOn(notification -> notification.getNotificationType() == NotificationType.ORDER_RECEIVED)
 				.hasSize(1);
+		assertThat(notificationRepository.findAll())
+				.filteredOn(notification -> notification.getNotificationType() == NotificationType.RESTAURANT_NEW_ORDER)
+				.hasSize(1);
 	}
 
 	@Test
@@ -429,6 +443,9 @@ class PaymentApiTest {
 		assertThat(order.getPaymentStatus()).isEqualTo(PaymentStatus.UNPAID);
 		assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
 		assertThat(attempt.getStatus()).isEqualTo(PaymentAttemptStatus.EXPIRED);
+		assertThat(notificationRepository.findAll())
+				.filteredOn(notification -> notification.getNotificationType() == NotificationType.RESTAURANT_NEW_ORDER)
+				.isEmpty();
 	}
 
 	@Test
@@ -642,11 +659,13 @@ class PaymentApiTest {
 				    "email": "john@example.com"
 				  },
 				  "timing": {
-				    "type": "ASAP"
+				    "type": "SCHEDULED",
+				    "requestedDate": "%s",
+				    "requestedTime": "18:30"
 				  },
 				  "items": %s
 				}
-				""".formatted(itemsJson);
+				""".formatted(nextOpenDate(), itemsJson);
 	}
 
 	private String deliveryOrderPayload(String itemsJson, String postcode) {
@@ -665,11 +684,21 @@ class PaymentApiTest {
 				    "postcode": "%s"
 				  },
 				  "timing": {
-				    "type": "ASAP"
+				    "type": "SCHEDULED",
+				    "requestedDate": "%s",
+				    "requestedTime": "18:30"
 				  },
 				  "items": %s
 				}
-				""".formatted(postcode, itemsJson);
+				""".formatted(postcode, nextOpenDate(), itemsJson);
+	}
+
+	private LocalDate nextOpenDate() {
+		LocalDate date = LocalDate.now().plusDays(1);
+		while (date.getDayOfWeek() == DayOfWeek.TUESDAY) {
+			date = date.plusDays(1);
+		}
+		return date;
 	}
 
 	private void enableDelivery(int deliveryFeePence, Integer minimumDeliveryOrderPence,

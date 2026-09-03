@@ -10,8 +10,26 @@ export type BackendFulfilmentOptionsResponse = {
   extraMileFeePence: number | null;
   freeDeliveryThresholdPence: number | null;
   minimumDeliveryOrderPence: number | null;
+  orderAvailability: BackendOrderAvailabilityResponse;
   preparationTimeMinutes: number | null;
   restaurantPostcode: string | null;
+};
+
+export type BackendOrderAvailabilityResponse = {
+  asapAvailable: boolean;
+  nextAvailableAt: string | null;
+  nextAvailableDate: string | null;
+  nextAvailableTime: string | null;
+  restaurantOpenNow: boolean;
+  restaurantTimezone: "Europe/London";
+  statusMessage: string | null;
+  validOrderDates: BackendOrderAvailabilityDateResponse[];
+};
+
+export type BackendOrderAvailabilityDateResponse = {
+  date: string;
+  label: string;
+  timeSlots: string[];
 };
 
 export type BackendCheckDeliveryRequest = {

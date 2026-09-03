@@ -277,14 +277,16 @@ class NotificationApiTest {
 								    "email": "john@example.com"
 								  },
 								  "timing": {
-								    "type": "ASAP"
+								    "type": "SCHEDULED",
+								    "requestedDate": "%s",
+								    "requestedTime": "18:30"
 								  },
 								  "notes": "No onions please",
 								  "items": [
 								    { "type": "MENU_ITEM", "menuItemId": %d, "quantity": 1 }
 								  ]
 								}
-								""".formatted(margherita.getId())))
+								""".formatted(nextOpenDate(), margherita.getId())))
 				.andExpect(status().isCreated())
 				.andReturn()
 				.getResponse()

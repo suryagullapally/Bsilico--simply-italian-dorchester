@@ -5,12 +5,10 @@ import {
   type CheckoutFieldName,
   type CheckoutState,
   type FulfilmentType,
-  type ScheduledDateOption,
   type TimingType,
 } from "@/lib/checkout/checkout-types";
+import type { BackendOrderAvailabilityResponse } from "@/types/backend-fulfilment";
 
-const OPENING_DAYS = "Wednesday – Monday";
-const OPENING_HOURS = "12:00 – 23:00";
 const FIRST_ORDER_TIME = "12:00";
 const LAST_ORDER_TIME = "22:45";
 
@@ -25,7 +23,8 @@ export const basilicoCollectionAddress = [
 export const checkoutGuidance = {
   delivery:
     "Delivery is checked from the address postcode you enter here. Fee and estimated delivery are confirmed before payment.",
-  hours: `${OPENING_DAYS}, ${OPENING_HOURS}. Tuesday closed.`,
+  hours:
+    "ASAP and scheduled times are checked by Basilico before payment.",
   notes: "Please tell us about any allergies or dietary requirements.",
   time: "Requested times are subject to confirmation.",
 };
@@ -52,7 +51,10 @@ export const initialCheckoutState: CheckoutState = {
   },
 };
 
-export function validateCheckout(state: CheckoutState) {
+export function validateCheckout(
+  state: CheckoutState,
+  orderAvailability?: BackendOrderAvailabilityResponse | null,
+) {
   const errors: CheckoutErrors = {};
 
   if (!state.fulfilmentType) {
@@ -93,15 +95,30 @@ export function validateCheckout(state: CheckoutState) {
     errors.timingType = "Choose ASAP or a requested time.";
   }
 
+  if (state.timing.type === "asap" && orderAvailability?.asapAvailable === false) {
+    errors.timingType =
+      "Basilico is currently closed. Please choose an available order time.";
+  }
+
   if (state.timing.type === "scheduled") {
+    const dateAvailability = orderAvailability?.validOrderDates.find(
+      (option) => option.date === state.timing.requestedDate,
+    );
+
     if (!state.timing.requestedDate) {
       errors.requestedDate = "Choose a day.";
-    } else if (isTuesday(state.timing.requestedDate)) {
-      errors.requestedDate = "Basilico is closed on Tuesdays.";
+    } else if (orderAvailability && !dateAvailability) {
+      errors.requestedDate = "Choose an available day.";
     }
 
     if (!state.timing.requestedTime) {
       errors.requestedTime = "Choose a time.";
+    } else if (
+      orderAvailability &&
+      (!dateAvailability ||
+        !dateAvailability.timeSlots.includes(state.timing.requestedTime))
+    ) {
+      errors.requestedTime = "Choose an available time.";
     } else if (!isValidScheduledTime(state.timing.requestedTime)) {
       errors.requestedTime = "Choose a time between 12:00 and 22:45.";
     }
@@ -189,51 +206,41 @@ export function serializeCheckoutDraft(state: CheckoutState): CheckoutDraft {
   };
 }
 
-export function getScheduledDateOptions(startDate = new Date(), daysToShow = 14) {
-  const options: ScheduledDateOption[] = [];
-  const date = new Date(
-    startDate.getFullYear(),
-    startDate.getMonth(),
-    startDate.getDate(),
+export function getScheduledDateOptions(
+  orderAvailability?: BackendOrderAvailabilityResponse | null,
+) {
+  return (
+    orderAvailability?.validOrderDates.map((date) => ({
+      label: date.label,
+      value: date.date,
+    })) ?? []
   );
-
-  while (options.length < daysToShow) {
-    if (date.getDay() !== 2) {
-      options.push({
-        label: new Intl.DateTimeFormat("en-GB", {
-          day: "numeric",
-          month: "short",
-          weekday: "long",
-        }).format(date),
-        value: formatDateValue(date),
-      });
-    }
-
-    date.setDate(date.getDate() + 1);
-  }
-
-  return options;
 }
 
-export function getScheduledTimeOptions() {
-  const options: string[] = [];
-  const start = timeToMinutes(FIRST_ORDER_TIME);
-  const end = timeToMinutes(LAST_ORDER_TIME);
-
-  for (let minutes = start; minutes <= end; minutes += 15) {
-    options.push(minutesToTime(minutes));
+export function getScheduledTimeOptions(
+  orderAvailability: BackendOrderAvailabilityResponse | null | undefined,
+  selectedDate: string,
+) {
+  if (!selectedDate) {
+    return [];
   }
 
-  return options;
+  return (
+    orderAvailability?.validOrderDates.find((date) => date.date === selectedDate)
+      ?.timeSlots ?? []
+  );
 }
 
-export function getTimingLabel(state: CheckoutState) {
+export function getTimingLabel(
+  state: CheckoutState,
+  orderAvailability?: BackendOrderAvailabilityResponse | null,
+) {
   if (state.timing.type === "asap") {
     return "AS SOON AS POSSIBLE";
   }
 
   if (state.timing.type === "scheduled") {
-    const dateOption = getScheduledDateOptions().find(
+    const dateOption = getScheduledDateOptions(orderAvailability).find(
       (option) => option.value === state.timing.requestedDate,
     );
 
@@ -306,35 +313,10 @@ function isValidScheduledTime(time: string) {
   );
 }
 
-function isTuesday(dateValue: string) {
-  const [year, month, day] = dateValue.split("-").map(Number);
-
-  if (!year || !month || !day) {
-    return false;
-  }
-
-  return new Date(year, month - 1, day).getDay() === 2;
-}
-
-function formatDateValue(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
 function timeToMinutes(time: string) {
   const [hours, minutes] = time.split(":").map(Number);
 
   return hours * 60 + minutes;
-}
-
-function minutesToTime(totalMinutes: number) {
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

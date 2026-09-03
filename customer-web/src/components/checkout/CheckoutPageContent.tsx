@@ -96,10 +96,21 @@ export function CheckoutPageContent() {
   const [deliveryCheck, setDeliveryCheck] = useState<DeliveryCheckState>({
     status: "idle",
   });
-  const scheduledDateOptions = useMemo(() => getScheduledDateOptions(), []);
-  const scheduledTimeOptions = useMemo(() => getScheduledTimeOptions(), []);
   const fulfilmentOptions =
     fulfilmentState.status === "ready" ? fulfilmentState.options : null;
+  const orderAvailability = fulfilmentOptions?.orderAvailability ?? null;
+  const scheduledDateOptions = useMemo(
+    () => getScheduledDateOptions(orderAvailability),
+    [orderAvailability],
+  );
+  const scheduledTimeOptions = useMemo(
+    () =>
+      getScheduledTimeOptions(
+        orderAvailability,
+        checkoutState.timing.requestedDate,
+      ),
+    [checkoutState.timing.requestedDate, orderAvailability],
+  );
   const onlineOrderingAvailable = Boolean(
     fulfilmentOptions?.collectionEnabled || fulfilmentOptions?.deliveryEnabled,
   );
@@ -187,6 +198,62 @@ export function CheckoutPageContent() {
     return () => window.clearTimeout(timeoutId);
   }, [draftHydrated, fulfilmentOptions]);
 
+  useEffect(() => {
+    if (!draftHydrated || !orderAvailability) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setCheckoutState((currentState) => {
+        if (
+          currentState.timing.type === "asap" &&
+          !orderAvailability.asapAvailable
+        ) {
+          return {
+            ...currentState,
+            timing: {
+              requestedDate: "",
+              requestedTime: "",
+              type: "",
+            },
+          };
+        }
+
+        if (currentState.timing.type !== "scheduled") {
+          return currentState;
+        }
+
+        const dateAvailability = orderAvailability.validOrderDates.find(
+          (date) => date.date === currentState.timing.requestedDate,
+        );
+        if (!dateAvailability) {
+          return {
+            ...currentState,
+            timing: {
+              requestedDate: "",
+              requestedTime: "",
+              type: "scheduled",
+            },
+          };
+        }
+
+        if (!dateAvailability.timeSlots.includes(currentState.timing.requestedTime)) {
+          return {
+            ...currentState,
+            timing: {
+              ...currentState.timing,
+              requestedTime: "",
+            },
+          };
+        }
+
+        return currentState;
+      });
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [draftHydrated, orderAvailability]);
+
   function updateFulfilmentType(fulfilmentType: FulfilmentType) {
     if (!fulfilmentOptions) {
       setErrors((currentErrors) => ({
@@ -259,11 +326,21 @@ export function CheckoutPageContent() {
   }
 
   function updateTimingType(type: TimingType) {
+    if (type === "asap" && orderAvailability?.asapAvailable === false) {
+      setErrors((currentErrors) => ({
+        ...currentErrors,
+        timingType:
+          "Basilico is currently closed. Please choose an available order time.",
+      }));
+      return;
+    }
+
     resetSubmission();
     setCheckoutState((currentState) => ({
       ...currentState,
       timing: {
-        ...currentState.timing,
+        requestedDate: type === "asap" ? "" : currentState.timing.requestedDate,
+        requestedTime: type === "asap" ? "" : currentState.timing.requestedTime,
         type,
       },
     }));
@@ -278,12 +355,17 @@ export function CheckoutPageContent() {
     setCheckoutState((currentState) => ({
       ...currentState,
       timing: {
-        ...currentState.timing,
-        [fieldName]: value,
+        requestedDate:
+          fieldName === "requestedDate" ? value : currentState.timing.requestedDate,
+        requestedTime:
+          fieldName === "requestedDate" ? "" : value,
         type: "scheduled",
       },
     }));
     clearError(fieldName);
+    if (fieldName === "requestedDate") {
+      clearError("requestedTime");
+    }
     clearError("timingType");
   }
 
@@ -367,7 +449,7 @@ export function CheckoutPageContent() {
     }
 
     const normalizedState = normalizeCheckoutState(checkoutState);
-    const nextErrors = validateCheckout(normalizedState);
+    const nextErrors = validateCheckout(normalizedState, orderAvailability);
 
     if (fulfilmentState.status === "loading") {
       nextErrors.fulfilmentType = "Ordering options are still loading.";
@@ -696,6 +778,8 @@ export function CheckoutPageContent() {
               </p>
             </div>
 
+            <OrderAvailabilityMessage orderAvailability={orderAvailability} />
+
             <fieldset
               className="checkout-choice-group checkout-choice-group--time"
               data-checkout-field="timingType"
@@ -704,12 +788,20 @@ export function CheckoutPageContent() {
               <legend className="sr-only">Choose fulfilment time</legend>
               <button
                 aria-pressed={checkoutState.timing.type === "asap"}
-                className={getChoiceClassName(checkoutState.timing.type === "asap")}
+                className={getChoiceClassName(
+                  checkoutState.timing.type === "asap",
+                  orderAvailability?.asapAvailable === false,
+                )}
+                disabled={orderAvailability?.asapAvailable === false}
                 onClick={() => updateTimingType("asap")}
                 type="button"
               >
                 <span>AS SOON AS POSSIBLE</span>
-                <span>We will confirm timing before payment.</span>
+                <span>
+                  {orderAvailability?.asapAvailable === false
+                    ? "Unavailable while Basilico is closed."
+                    : "We will confirm timing before payment."}
+                </span>
               </button>
               <button
                 aria-pressed={checkoutState.timing.type === "scheduled"}
@@ -802,6 +894,7 @@ export function CheckoutPageContent() {
           fulfilmentState={fulfilmentState}
           itemCount={itemCount}
           items={items}
+          orderAvailability={orderAvailability}
           onlineOrderingAvailable={onlineOrderingAvailable}
           submission={submission}
           subtotalPennies={subtotalPennies}
@@ -877,6 +970,31 @@ function FieldError({ id, message }: FieldErrorProps) {
   );
 }
 
+function OrderAvailabilityMessage({
+  orderAvailability,
+}: {
+  orderAvailability: BackendFulfilmentOptionsResponse["orderAvailability"] | null;
+}) {
+  if (!orderAvailability) {
+    return (
+      <p className="type-small checkout-order-availability" role="status">
+        Checking Basilico ordering times.
+      </p>
+    );
+  }
+
+  if (orderAvailability.asapAvailable) {
+    return null;
+  }
+
+  return (
+    <div className="checkout-order-availability checkout-order-availability--closed">
+      <strong>Basilico is currently closed.</strong>
+      <span>{orderAvailability.statusMessage ?? "You can still order for later."}</span>
+    </div>
+  );
+}
+
 type CheckoutReviewProps = {
   checkoutState: CheckoutState;
   deliveryCheck: DeliveryCheckState;
@@ -885,6 +1003,7 @@ type CheckoutReviewProps = {
   fulfilmentState: FulfilmentOptionsState;
   itemCount: number;
   items: CartLine[];
+  orderAvailability: BackendFulfilmentOptionsResponse["orderAvailability"] | null;
   onlineOrderingAvailable: boolean;
   submission: OrderSubmissionState;
   subtotalPennies: number;
@@ -898,6 +1017,7 @@ function CheckoutReview({
   fulfilmentState,
   itemCount,
   items,
+  orderAvailability,
   onlineOrderingAvailable,
   submission,
   subtotalPennies,
@@ -932,7 +1052,10 @@ function CheckoutReview({
             value={formatDeliveryAddress(checkoutState.deliveryAddress)}
           />
         ) : null}
-        <ReviewRow label="Requested time" value={getTimingLabel(checkoutState)} />
+        <ReviewRow
+          label="Requested time"
+          value={getTimingLabel(checkoutState, orderAvailability)}
+        />
         {checkoutState.notes.trim() ? (
           <ReviewRow label="Order notes" value={checkoutState.notes.trim()} />
         ) : null}

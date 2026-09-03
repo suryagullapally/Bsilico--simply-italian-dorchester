@@ -266,6 +266,7 @@ export function MenuDeliveryStatus() {
   return (
     <section className="menu-delivery-status" aria-labelledby="menu-delivery-title">
       <div className="menu-delivery-status__content">
+        <OrderAvailabilityBanner options={options} />
         <div>
           <p className="type-eyebrow menu-delivery-status__eyebrow">
             Delivery
@@ -324,6 +325,27 @@ export function MenuDeliveryStatus() {
         )}
       </div>
     </section>
+  );
+}
+
+function OrderAvailabilityBanner({
+  options,
+}: {
+  options: BackendFulfilmentOptionsResponse | null;
+}) {
+  const availability = options?.orderAvailability;
+  if (!availability || availability.asapAvailable) {
+    return null;
+  }
+
+  return (
+    <div className="menu-delivery-status__closed-banner" role="status">
+      <div>
+        <strong>Basilico is currently closed</strong>
+        <span>{availability.statusMessage ?? "You can still order for later."}</span>
+      </div>
+      <a href="#menu-categories">ORDER FOR LATER</a>
+    </div>
   );
 }
 
