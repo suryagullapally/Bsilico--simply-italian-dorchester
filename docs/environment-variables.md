@@ -65,7 +65,8 @@ SMTP email:
 | `MAIL_SMTP_STARTTLS` | No | Defaults to `true` in prod profile. |
 | `MAIL_MAX_ATTEMPTS` | No | Defaults to `3`. |
 | `MAIL_BATCH_SIZE` | No | Defaults to `10`. |
-| `MAIL_WORKER_ENABLED` | No | Defaults to `true`. |
+| `MAIL_RETRY_TRIGGER_TOKEN` | Required when using external retry trigger | Long random secret for `POST /api/internal/notifications/process-pending`; Cloud Scheduler sends it as `X-Basilico-Retry-Token`. |
+| `MAIL_WORKER_ENABLED` | No | Defaults to `true`; for Cloud Run request-based production keep this `false` and use the external retry trigger instead. |
 | `MAIL_RETRY_DELAY_MS` | No | Defaults to `30000`. |
 | `MAIL_INITIAL_DELAY_MS` | No | Defaults to `5000`. |
 | `MAIL_HEALTH_ENABLED` | No | Defaults to `false`; enable only if SMTP health should affect readiness. |
@@ -157,7 +158,8 @@ Required before email live:
 | `MAIL_FROM_EMAIL` | Verified sender address. |
 | `MAIL_FROM_NAME` | Sender display name. |
 | `MAIL_SMTP_AUTH` / `MAIL_SMTP_STARTTLS` | Usually `true` / `true` for production SMTP. |
-| `MAIL_WORKER_ENABLED` | Keep `false` until SMTP is configured; set `true` when ready to send. |
+| `MAIL_WORKER_ENABLED` | Keep `false` for Cloud Run request-based billing; retries are triggered externally. |
+| `MAIL_RETRY_TRIGGER_TOKEN` | Long random secret used by Cloud Scheduler in `X-Basilico-Retry-Token`. |
 
 Required before delivery live:
 

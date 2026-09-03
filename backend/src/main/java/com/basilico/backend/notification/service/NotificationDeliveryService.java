@@ -40,29 +40,35 @@ public class NotificationDeliveryService {
 		this.transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
 	}
 
-	public void processNotification(Long notificationId) {
-		processNotification(notificationId, false);
+	public boolean processNotification(Long notificationId) {
+		return processNotification(notificationId, false);
 	}
 
-	public void retryNotification(Long notificationId) {
-		processNotification(notificationId, true);
+	public boolean retryNotification(Long notificationId) {
+		return processNotification(notificationId, true);
 	}
 
-	public void processPendingBatch() {
+	public int processPendingBatch() {
 		List<Long> notificationIds = notificationRepository.findProcessableIds(
 				List.of(NotificationStatus.PENDING, NotificationStatus.FAILED),
 				properties.maxAttempts(),
 				PageRequest.of(0, properties.batchSize())
 		);
-		notificationIds.forEach(this::processNotification);
+		int processedCount = 0;
+		for (Long notificationId : notificationIds) {
+			if (processNotification(notificationId)) {
+				processedCount++;
+			}
+		}
+		return processedCount;
 	}
 
-	private void processNotification(Long notificationId, boolean forceRetry) {
-		transactionTemplate.executeWithoutResult(status -> {
+	private boolean processNotification(Long notificationId, boolean forceRetry) {
+		Boolean processed = transactionTemplate.execute(status -> {
 			CustomerNotification notification = notificationRepository.findByIdForUpdate(notificationId)
 					.orElse(null);
 			if (notification == null || !canSend(notification, forceRetry)) {
-				return;
+				return false;
 			}
 
 			notification.setStatus(NotificationStatus.SENDING);
@@ -80,7 +86,9 @@ public class NotificationDeliveryService {
 				notification.setStatus(NotificationStatus.FAILED);
 				notification.setLastError(cleanErrorMessage(exception));
 			}
+			return true;
 		});
+		return Boolean.TRUE.equals(processed);
 	}
 
 	private boolean canSend(CustomerNotification notification, boolean forceRetry) {

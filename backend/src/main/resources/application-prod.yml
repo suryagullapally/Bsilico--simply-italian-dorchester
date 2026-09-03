@@ -55,6 +55,7 @@ basilico:
     email:
       from-email: ${MAIL_FROM_EMAIL:}
       from-name: ${MAIL_FROM_NAME:Basilico - Simple Italian}
+      retry-trigger-token: ${MAIL_RETRY_TRIGGER_TOKEN:}
       worker-enabled: ${MAIL_WORKER_ENABLED:true}
     restaurant:
       order-alert-email: ${BASILICO_ORDER_ALERT_EMAIL:}

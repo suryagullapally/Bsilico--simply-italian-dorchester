@@ -67,6 +67,7 @@ MAIL_SMTP_AUTH=false
 MAIL_SMTP_STARTTLS=false
 MAIL_MAX_ATTEMPTS=3
 MAIL_BATCH_SIZE=10
+MAIL_RETRY_TRIGGER_TOKEN=
 MAIL_WORKER_ENABLED=true
 MAIL_RETRY_DELAY_MS=30000
 MAIL_INITIAL_DELAY_MS=5000
@@ -636,6 +637,8 @@ MAIL_FROM_NAME=Basilico - Simple Italian
 MAIL_SMTP_AUTH=true
 MAIL_SMTP_STARTTLS=true
 MAIL_MAX_ATTEMPTS=3
+MAIL_BATCH_SIZE=10
+MAIL_RETRY_TRIGGER_TOKEN=
 MAIL_WORKER_ENABLED=true
 MAIL_HEALTH_ENABLED=false
 BASILICO_ORDER_ALERT_EMAIL=
@@ -652,6 +655,25 @@ Email delivery follows an outbox-style lifecycle:
 
 Email failure does not rollback payments, orders or bookings. Failed messages
 remain visible in Admin and can be retried.
+
+For Cloud Run request-based production deployments, keep the in-process
+scheduled worker disabled:
+
+```txt
+MAIL_WORKER_ENABLED=false
+```
+
+Then trigger retries externally with Google Cloud Scheduler:
+
+```http
+POST /api/internal/notifications/process-pending
+X-Basilico-Retry-Token: <MAIL_RETRY_TRIGGER_TOKEN>
+```
+
+`MAIL_RETRY_TRIGGER_TOKEN` must be a long random secret. The endpoint returns a
+small operational response such as `{"status":"processed","processedCount":0}`.
+Missing or incorrect tokens return `401`; a missing server-side trigger token
+fails closed with `503`. The token is never logged or returned.
 
 Automatic notification triggers:
 
@@ -699,6 +721,10 @@ also require CSRF protection.
 Manual email messages must reference exactly one order or booking. The backend
 resolves the stored customer email from that order/booking and does not accept
 an arbitrary recipient address for this endpoint.
+
+`POST /api/internal/notifications/process-pending` is not an admin browser API.
+It is a server-to-server retry trigger for Cloud Scheduler, does not require an
+admin session or CSRF token, and is protected by `MAIL_RETRY_TRIGGER_TOKEN`.
 
 ## Public Bookings API
 

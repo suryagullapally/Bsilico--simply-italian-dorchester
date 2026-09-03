@@ -25,6 +25,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.session.ChangeSessionIdAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
@@ -32,6 +33,7 @@ import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
 import com.basilico.backend.common.error.ApiErrorResponse;
+import com.basilico.backend.notification.security.NotificationRetryTriggerFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -41,7 +43,8 @@ public class SecurityConfig {
 	public SecurityFilterChain securityFilterChain(HttpSecurity http,
 			ObjectMapper objectMapper,
 			SecurityContextRepository securityContextRepository,
-			CsrfTokenRepository csrfTokenRepository) throws Exception {
+			CsrfTokenRepository csrfTokenRepository,
+			NotificationRetryTriggerFilter notificationRetryTriggerFilter) throws Exception {
 		http.cors(Customizer.withDefaults());
 		http.csrf(csrf -> csrf
 				.csrfTokenRepository(csrfTokenRepository)
@@ -51,8 +54,11 @@ public class SecurityConfig {
 						PathPatternRequestMatcher.pathPattern(HttpMethod.POST, "/api/fulfilment/check-delivery"),
 						PathPatternRequestMatcher.pathPattern(HttpMethod.POST, "/api/fulfilment/delivery-quote"),
 						PathPatternRequestMatcher.pathPattern(HttpMethod.POST, "/api/payments/checkout-session"),
-						PathPatternRequestMatcher.pathPattern(HttpMethod.POST, "/api/payments/stripe/webhook")
+						PathPatternRequestMatcher.pathPattern(HttpMethod.POST, "/api/payments/stripe/webhook"),
+						PathPatternRequestMatcher.pathPattern(HttpMethod.POST,
+								NotificationRetryTriggerFilter.TRIGGER_PATH)
 				));
+		http.addFilterBefore(notificationRetryTriggerFilter, AuthorizationFilter.class);
 		http.securityContext(securityContext -> securityContext
 				.securityContextRepository(securityContextRepository));
 		http.sessionManagement(session -> session
@@ -68,6 +74,7 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.POST, "/api/payments/checkout-session").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/payments/stripe/webhook").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/payments/checkout-session/**").permitAll()
+				.requestMatchers(HttpMethod.POST, NotificationRetryTriggerFilter.TRIGGER_PATH).permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/admin/auth/csrf").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/admin/auth/login").permitAll()
 				.requestMatchers("/api/admin/**").hasAnyRole("OWNER", "MANAGER", "STAFF")

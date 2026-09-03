@@ -94,6 +94,7 @@ basilico:
       from-name: ${MAIL_FROM_NAME:Basilico - Simple Italian}
       max-attempts: ${MAIL_MAX_ATTEMPTS:3}
       batch-size: ${MAIL_BATCH_SIZE:10}
+      retry-trigger-token: ${MAIL_RETRY_TRIGGER_TOKEN:}
       worker-enabled: ${MAIL_WORKER_ENABLED:true}
       retry-delay-ms: ${MAIL_RETRY_DELAY_MS:30000}
       initial-delay-ms: ${MAIL_INITIAL_DELAY_MS:5000}

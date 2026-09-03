@@ -269,7 +269,8 @@ MAIL_FROM_EMAIL=
 MAIL_FROM_NAME=Basilico - Simple Italian
 MAIL_SMTP_AUTH=true
 MAIL_SMTP_STARTTLS=true
-MAIL_WORKER_ENABLED=true
+MAIL_WORKER_ENABLED=false
+MAIL_RETRY_TRIGGER_TOKEN=
 BASILICO_ORDER_ALERT_EMAIL=
 ADMIN_WEB_BASE_URL=https://admin.basilicodorchester.co.uk
 ```
@@ -281,7 +282,19 @@ Verify:
 - test order/booking emails arrive
 - paid customer orders also create the internal restaurant new-order alert
 - failed notifications are recorded and retryable
+- `POST /api/internal/notifications/process-pending` rejects missing/wrong
+  `X-Basilico-Retry-Token`
 - Mailpit is not used in production
+
+For Cloud Run request-based billing, create a Google Cloud Scheduler job after
+backend deployment:
+
+- schedule: every 5 minutes
+- method: `POST`
+- URL: `https://api.basilicodorchester.co.uk/api/internal/notifications/process-pending`
+- header: `X-Basilico-Retry-Token: <MAIL_RETRY_TRIGGER_TOKEN>`
+
+Do not put the retry token in Git or logs.
 
 ## O. Perform Staging QA
 
