@@ -17,6 +17,18 @@ export type PaymentAttemptStatus =
   | "FAILED"
   | "OPEN"
   | "PAID";
+export type PaymentRefundStatus =
+  | "CREATED"
+  | "PENDING"
+  | "SUCCEEDED"
+  | "FAILED"
+  | "CANCELED"
+  | "REQUIRES_ACTION";
+export type PaymentRefundReason =
+  | "CUSTOMER_REQUESTED"
+  | "DUPLICATE"
+  | "FRAUDULENT"
+  | "OTHER";
 export type PaymentProvider = "STRIPE";
 export type BookingStatus =
   | "REQUESTED"
@@ -189,6 +201,14 @@ export type AdminOrderResponse = {
   totalPence: number;
   items: OrderItemResponse[];
   paymentAttempts: PaymentAttemptResponse[];
+  refunds: PaymentRefundResponse[];
+  refundEligible: boolean;
+  refundStatus: PaymentRefundStatus | null;
+  refundAmountPence: number | null;
+  refundReason: PaymentRefundReason | null;
+  refundRequestedAt: string | null;
+  refundCompletedAt: string | null;
+  refundFailureReason: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -204,6 +224,25 @@ export type PaymentAttemptResponse = {
   createdAt: string | null;
   updatedAt: string | null;
   completedAt: string | null;
+};
+
+export type PaymentRefundResponse = {
+  id: number;
+  provider: PaymentProvider;
+  status: PaymentRefundStatus;
+  amountPence: number;
+  currency: string;
+  reason: PaymentRefundReason;
+  note: string | null;
+  failureReason: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  completedAt: string | null;
+};
+
+export type RefundOrderRequest = {
+  reason: PaymentRefundReason;
+  note?: string;
 };
 
 export type AdminBookingSummaryResponse = {
@@ -295,10 +334,13 @@ export type NotificationType =
   | "ORDER_ACCEPTED"
   | "ORDER_READY"
   | "ORDER_CANCELLED"
+  | "ORDER_REFUNDED"
   | "BOOKING_REQUEST_RECEIVED"
   | "BOOKING_CONFIRMED"
   | "BOOKING_DECLINED"
   | "BOOKING_CANCELLED"
+  | "RESTAURANT_NEW_ORDER"
+  | "RESTAURANT_NEW_BOOKING"
   | "MANUAL_MESSAGE";
 
 export type NotificationResponse = {

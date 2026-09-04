@@ -51,7 +51,12 @@ import com.basilico.backend.order.entity.PaymentStatus;
 import com.basilico.backend.order.entity.TimingType;
 import com.basilico.backend.order.repository.CustomerOrderRepository;
 import com.basilico.backend.payment.dto.PaymentAttemptResponse;
+import com.basilico.backend.payment.dto.PaymentRefundResponse;
+import com.basilico.backend.payment.entity.PaymentAttemptStatus;
+import com.basilico.backend.payment.entity.PaymentRefund;
+import com.basilico.backend.payment.entity.PaymentRefundStatus;
 import com.basilico.backend.payment.repository.PaymentAttemptRepository;
+import com.basilico.backend.payment.repository.PaymentRefundRepository;
 import com.basilico.backend.payment.service.ManualPaymentStatusProperties;
 
 @Service
@@ -67,6 +72,7 @@ public class OrderService {
 	private final MenuCustomizerRepository customizerRepository;
 	private final PizzaToppingRepository toppingRepository;
 	private final PaymentAttemptRepository paymentAttemptRepository;
+	private final PaymentRefundRepository paymentRefundRepository;
 	private final ManualPaymentStatusProperties manualPaymentStatusProperties;
 	private final FulfilmentService fulfilmentService;
 	private final CustomerNotificationService notificationService;
@@ -76,6 +82,7 @@ public class OrderService {
 	public OrderService(CustomerOrderRepository orderRepository, MenuItemRepository menuItemRepository,
 			MenuCustomizerRepository customizerRepository, PizzaToppingRepository toppingRepository,
 			PaymentAttemptRepository paymentAttemptRepository,
+			PaymentRefundRepository paymentRefundRepository,
 			ManualPaymentStatusProperties manualPaymentStatusProperties,
 			FulfilmentService fulfilmentService,
 			CustomerNotificationService notificationService,
@@ -85,6 +92,7 @@ public class OrderService {
 		this.customizerRepository = customizerRepository;
 		this.toppingRepository = toppingRepository;
 		this.paymentAttemptRepository = paymentAttemptRepository;
+		this.paymentRefundRepository = paymentRefundRepository;
 		this.manualPaymentStatusProperties = manualPaymentStatusProperties;
 		this.fulfilmentService = fulfilmentService;
 		this.notificationService = notificationService;
@@ -382,6 +390,8 @@ public class OrderService {
 	}
 
 	private AdminOrderResponse toAdminOrderResponse(CustomerOrder order) {
+		List<PaymentRefundResponse> refunds = toPaymentRefundResponses(order);
+		PaymentRefund latestRefund = latestRefund(order).orElse(null);
 		return new AdminOrderResponse(
 				order.getId(),
 				order.getOrderReference(),
@@ -406,9 +416,39 @@ public class OrderService {
 				order.getEstimatedDeliveryMinutes(),
 				toOrderItemResponses(order.getItems()),
 				toPaymentAttemptResponses(order),
+				refunds,
+				isRefundEligible(order),
+				latestRefund == null ? null : latestRefund.getStatus(),
+				latestRefund == null ? null : latestRefund.getAmountPence(),
+				latestRefund == null ? null : latestRefund.getReason(),
+				latestRefund == null ? null : latestRefund.getCreatedAt(),
+				latestRefund == null ? null : latestRefund.getCompletedAt(),
+				latestRefund == null ? null : latestRefund.getFailureReason(),
 				order.getCreatedAt(),
 				order.getUpdatedAt()
 		);
+	}
+
+	private boolean isRefundEligible(CustomerOrder order) {
+		if (order.getPaymentStatus() != PaymentStatus.PAID) {
+			return false;
+		}
+
+		boolean hasPaidPaymentIntent = paymentAttemptRepository
+				.findFirstByOrderAndStatusAndStripePaymentIntentIdIsNotNullOrderByCreatedAtDesc(
+						order, PaymentAttemptStatus.PAID)
+				.filter(attempt -> attempt.getAmountPence() == order.getTotalPence())
+				.isPresent();
+		if (!hasPaidPaymentIntent) {
+			return false;
+		}
+
+		return !paymentRefundRepository.existsByOrderIdAndStatusIn(order.getId(), List.of(
+				PaymentRefundStatus.CREATED,
+				PaymentRefundStatus.PENDING,
+				PaymentRefundStatus.REQUIRES_ACTION,
+				PaymentRefundStatus.SUCCEEDED
+		));
 	}
 
 	private List<PaymentAttemptResponse> toPaymentAttemptResponses(CustomerOrder order) {
@@ -427,6 +467,33 @@ public class OrderService {
 						attempt.getCompletedAt()
 				))
 				.toList();
+	}
+
+	private List<PaymentRefundResponse> toPaymentRefundResponses(CustomerOrder order) {
+		return paymentRefundRepository.findByOrderIdOrderByCreatedAtDesc(order.getId())
+				.stream()
+				.map(this::toPaymentRefundResponse)
+				.toList();
+	}
+
+	private PaymentRefundResponse toPaymentRefundResponse(PaymentRefund refund) {
+		return new PaymentRefundResponse(
+				refund.getId(),
+				refund.getProvider(),
+				refund.getStatus(),
+				refund.getAmountPence(),
+				refund.getCurrency(),
+				refund.getReason(),
+				refund.getNote(),
+				refund.getFailureReason(),
+				refund.getCreatedAt(),
+				refund.getUpdatedAt(),
+				refund.getCompletedAt()
+		);
+	}
+
+	private java.util.Optional<PaymentRefund> latestRefund(CustomerOrder order) {
+		return paymentRefundRepository.findFirstByOrderIdOrderByCreatedAtDesc(order.getId());
 	}
 
 	private DeliveryAddressResponse toDeliveryAddressResponse(CustomerOrder order) {

@@ -47,6 +47,9 @@ public class PaymentService {
 	private static final String CHECKOUT_SESSION_EXPIRED = "checkout.session.expired";
 	private static final String CHECKOUT_SESSION_ASYNC_PAYMENT_SUCCEEDED = "checkout.session.async_payment_succeeded";
 	private static final String CHECKOUT_SESSION_ASYNC_PAYMENT_FAILED = "checkout.session.async_payment_failed";
+	private static final String REFUND_CREATED = "refund.created";
+	private static final String REFUND_UPDATED = "refund.updated";
+	private static final String REFUND_FAILED = "refund.failed";
 
 	private final CustomerOrderRepository orderRepository;
 	private final PaymentAttemptRepository paymentAttemptRepository;
@@ -54,19 +57,22 @@ public class PaymentService {
 	private final StripeCheckoutGateway stripeCheckoutGateway;
 	private final StripePaymentProperties stripePaymentProperties;
 	private final CustomerNotificationService notificationService;
+	private final PaymentRefundService paymentRefundService;
 
 	public PaymentService(CustomerOrderRepository orderRepository,
 			PaymentAttemptRepository paymentAttemptRepository,
 			StripeWebhookEventRepository webhookEventRepository,
 			StripeCheckoutGateway stripeCheckoutGateway,
 			StripePaymentProperties stripePaymentProperties,
-			CustomerNotificationService notificationService) {
+			CustomerNotificationService notificationService,
+			PaymentRefundService paymentRefundService) {
 		this.orderRepository = orderRepository;
 		this.paymentAttemptRepository = paymentAttemptRepository;
 		this.webhookEventRepository = webhookEventRepository;
 		this.stripeCheckoutGateway = stripeCheckoutGateway;
 		this.stripePaymentProperties = stripePaymentProperties;
 		this.notificationService = notificationService;
+		this.paymentRefundService = paymentRefundService;
 	}
 
 	@Transactional
@@ -156,6 +162,7 @@ public class PaymentService {
 			case CHECKOUT_SESSION_COMPLETED, CHECKOUT_SESSION_ASYNC_PAYMENT_SUCCEEDED -> handlePaidSession(event.session());
 			case CHECKOUT_SESSION_EXPIRED -> handleExpiredSession(event.session());
 			case CHECKOUT_SESSION_ASYNC_PAYMENT_FAILED -> handleFailedSession(event.session());
+			case REFUND_CREATED, REFUND_UPDATED, REFUND_FAILED -> paymentRefundService.handleStripeRefundWebhook(event.refund());
 			default -> {
 				// Unknown Stripe events are recorded for idempotency but do not affect order state.
 			}

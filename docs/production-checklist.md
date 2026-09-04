@@ -53,6 +53,7 @@ production environment.
 - [ ] webhook signing secret configured
 - [ ] live payment QA completed
 - [ ] failed-payment flow QA completed
+- [ ] full admin refund QA completed
 - [ ] duplicate webhook/idempotency QA completed
 
 ## Email
@@ -62,6 +63,7 @@ production environment.
 - [ ] SMTP credentials configured
 - [ ] order received email QA completed
 - [ ] internal paid-order alert email QA completed
+- [ ] internal new-booking alert email QA completed
 - [ ] booking request email QA completed
 - [ ] admin manual email QA completed
 - [ ] failed notification retry QA completed

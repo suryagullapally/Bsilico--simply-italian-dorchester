@@ -29,6 +29,7 @@ import com.basilico.backend.order.entity.CustomerOrder;
 import com.basilico.backend.order.entity.OrderStatus;
 import com.basilico.backend.order.entity.PaymentStatus;
 import com.basilico.backend.order.repository.CustomerOrderRepository;
+import com.basilico.backend.payment.entity.PaymentRefund;
 
 @Service
 public class CustomerNotificationService {
@@ -93,6 +94,21 @@ public class CustomerNotificationService {
 		);
 	}
 
+	public void queueOrderRefunded(CustomerOrder order, PaymentRefund refund) {
+		if (refund == null || refund.getId() == null) {
+			return;
+		}
+
+		queueAutomaticOrderNotification(
+				NotificationType.ORDER_REFUNDED,
+				order,
+				order.getCustomerEmail(),
+				customerName(order.getCustomerFirstName(), order.getCustomerLastName()),
+				templateService.orderRefunded(order, refund),
+				NotificationType.ORDER_REFUNDED.name() + ":" + refund.getId()
+		);
+	}
+
 	public void queueOrderStatusNotification(CustomerOrder order, OrderStatus previousStatus) {
 		if (previousStatus == order.getStatus()) {
 			return;
@@ -113,6 +129,26 @@ public class CustomerNotificationService {
 	public void queueBookingRequestReceived(Booking booking) {
 		queueAutomaticBookingNotification(NotificationType.BOOKING_REQUEST_RECEIVED, booking,
 				templateService.bookingRequestReceived(booking));
+	}
+
+	public void queueRestaurantNewBookingAlert(Booking booking) {
+		if (!restaurantNotificationProperties.hasBookingAlertEmail()) {
+			logger.warn("Restaurant new-booking alert email is not configured; booking {} was still saved.",
+					booking.getBookingReference());
+			return;
+		}
+
+		EmailContent content = templateService.restaurantNewBooking(
+				booking,
+				restaurantNotificationProperties.adminBookingUrl(booking.getId())
+		);
+		queueAutomaticBookingNotification(
+				NotificationType.RESTAURANT_NEW_BOOKING,
+				booking,
+				restaurantNotificationProperties.normalizedBookingAlertEmail(),
+				RESTAURANT_RECIPIENT_NAME,
+				content
+		);
 	}
 
 	public void queueBookingStatusNotification(Booking booking, BookingStatus previousStatus) {
@@ -184,6 +220,11 @@ public class CustomerNotificationService {
 	private void queueAutomaticOrderNotification(NotificationType type, CustomerOrder order,
 			String recipientEmail, String recipientName, EmailContent content) {
 		String deduplicationKey = type.name() + ":" + order.getId();
+		queueAutomaticOrderNotification(type, order, recipientEmail, recipientName, content, deduplicationKey);
+	}
+
+	private void queueAutomaticOrderNotification(NotificationType type, CustomerOrder order,
+			String recipientEmail, String recipientName, EmailContent content, String deduplicationKey) {
 		if (notificationRepository.findByDeduplicationKey(deduplicationKey).isPresent()) {
 			return;
 		}
@@ -202,6 +243,17 @@ public class CustomerNotificationService {
 	}
 
 	private void queueAutomaticBookingNotification(NotificationType type, Booking booking, EmailContent content) {
+		queueAutomaticBookingNotification(
+				type,
+				booking,
+				booking.getEmail(),
+				customerName(booking.getFirstName(), booking.getLastName()),
+				content
+		);
+	}
+
+	private void queueAutomaticBookingNotification(NotificationType type, Booking booking,
+			String recipientEmail, String recipientName, EmailContent content) {
 		String deduplicationKey = type.name() + ":" + booking.getId();
 		if (notificationRepository.findByDeduplicationKey(deduplicationKey).isPresent()) {
 			return;
@@ -210,8 +262,8 @@ public class CustomerNotificationService {
 		CustomerNotification notification = notificationRepository.saveAndFlush(new CustomerNotification(
 				type,
 				booking,
-				booking.getEmail(),
-				customerName(booking.getFirstName(), booking.getLastName()),
+				recipientEmail,
+				recipientName,
 				content.subject(),
 				content.text(),
 				content.html(),

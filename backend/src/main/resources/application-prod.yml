@@ -59,6 +59,7 @@ basilico:
       worker-enabled: ${MAIL_WORKER_ENABLED:true}
     restaurant:
       order-alert-email: ${BASILICO_ORDER_ALERT_EMAIL:}
+      booking-alert-email: ${BASILICO_BOOKING_ALERT_EMAIL:}
       admin-base-url: ${ADMIN_WEB_BASE_URL:https://admin.basilicodorchester.co.uk}
   delivery:
     postcodes-io:

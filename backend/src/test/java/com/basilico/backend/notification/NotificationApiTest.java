@@ -42,12 +42,15 @@ import com.basilico.backend.notification.entity.CustomerNotification;
 import com.basilico.backend.notification.entity.NotificationStatus;
 import com.basilico.backend.notification.entity.NotificationType;
 import com.basilico.backend.notification.repository.CustomerNotificationRepository;
+import com.basilico.backend.notification.service.CustomerNotificationService;
 import com.basilico.backend.order.entity.CustomerOrder;
 import com.basilico.backend.order.repository.CustomerOrderRepository;
 
 @SpringBootTest(properties = {
 		"basilico.notifications.email.worker-enabled=false",
-		"management.health.mail.enabled=false"
+		"management.health.mail.enabled=false",
+		"basilico.notifications.restaurant.booking-alert-email=basilico2921@gmail.com",
+		"basilico.notifications.restaurant.admin-base-url=https://admin.basilicodorchester.co.uk"
 })
 @AutoConfigureMockMvc
 @Transactional
@@ -68,6 +71,9 @@ class NotificationApiTest {
 	@Autowired
 	private CustomerNotificationRepository notificationRepository;
 
+	@Autowired
+	private CustomerNotificationService notificationService;
+
 	@MockitoBean
 	private JavaMailSender mailSender;
 
@@ -80,7 +86,7 @@ class NotificationApiTest {
 	}
 
 	@Test
-	void bookingCreationQueuesRequestReceivedNotification() throws Exception {
+	void bookingCreationQueuesCustomerAndRestaurantRequestNotifications() throws Exception {
 		Booking booking = createBooking();
 
 		assertThat(notificationsOfTypeForBooking(NotificationType.BOOKING_REQUEST_RECEIVED, booking.getId()))
@@ -88,6 +94,28 @@ class NotificationApiTest {
 				.first()
 				.extracting(CustomerNotification::getStatus)
 				.isEqualTo(NotificationStatus.PENDING);
+		assertThat(notificationsOfTypeForBooking(NotificationType.RESTAURANT_NEW_BOOKING, booking.getId()))
+				.hasSize(1)
+				.first()
+				.satisfies(notification -> {
+					assertThat(notification.getRecipientEmail()).isEqualTo("basilico2921@gmail.com");
+					assertThat(notification.getRecipientName()).isEqualTo("Basilico team");
+					assertThat(notification.getSubject()).contains("NEW TABLE BOOKING", "4 guests", "19:30");
+					assertThat(notification.getBodyText()).contains(
+							"NEW TABLE BOOKING",
+							booking.getBookingReference(),
+							"John Smith",
+							"07123456789",
+							"john@example.com",
+							"Number of guests",
+							"Birthday dinner",
+							"https://admin.basilicodorchester.co.uk/bookings/" + booking.getId()
+					);
+				});
+
+		notificationService.queueRestaurantNewBookingAlert(booking);
+		assertThat(notificationsOfTypeForBooking(NotificationType.RESTAURANT_NEW_BOOKING, booking.getId()))
+				.hasSize(1);
 	}
 
 	@Test

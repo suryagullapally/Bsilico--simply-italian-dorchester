@@ -5,10 +5,12 @@ import com.basilico.backend.common.error.ServiceUnavailableException;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Event;
+import com.stripe.model.Refund;
 import com.stripe.model.StripeObject;
 import com.stripe.model.checkout.Session;
 import com.stripe.net.RequestOptions;
 import com.stripe.net.Webhook;
+import com.stripe.param.RefundCreateParams;
 import com.stripe.param.checkout.SessionCreateParams;
 
 import org.slf4j.Logger;
@@ -24,6 +26,9 @@ public class StripeJavaCheckoutGateway implements StripeCheckoutGateway {
 	private static final String CHECKOUT_SESSION_EXPIRED = "checkout.session.expired";
 	private static final String CHECKOUT_SESSION_ASYNC_PAYMENT_SUCCEEDED = "checkout.session.async_payment_succeeded";
 	private static final String CHECKOUT_SESSION_ASYNC_PAYMENT_FAILED = "checkout.session.async_payment_failed";
+	private static final String REFUND_CREATED = "refund.created";
+	private static final String REFUND_UPDATED = "refund.updated";
+	private static final String REFUND_FAILED = "refund.failed";
 
 	private final StripePaymentProperties properties;
 
@@ -79,6 +84,36 @@ public class StripeJavaCheckoutGateway implements StripeCheckoutGateway {
 		}
 	}
 
+	@Override
+	public StripeRefundData createRefund(StripeRefundCreateCommand command) {
+		requireSecretKey();
+
+		RefundCreateParams.Builder builder = RefundCreateParams.builder()
+				.setPaymentIntent(command.paymentIntentId())
+				.setAmount((long) command.amountPence())
+				.setCurrency(command.currency().toLowerCase(java.util.Locale.UK));
+
+		if (command.reason() != null) {
+			builder.setReason(toStripeReason(command.reason()));
+		}
+
+		command.metadata().forEach(builder::putMetadata);
+
+		try {
+			Refund refund = Refund.create(
+					builder.build(),
+					requestOptionsBuilder()
+							.setIdempotencyKey(command.idempotencyKey())
+							.build()
+			);
+			return toRefundData(refund);
+		}
+		catch (StripeException exception) {
+			logStripeException("create refund", exception);
+			throw paymentUnavailable();
+		}
+	}
+
 	private void logStripeException(String operation, StripeException exception) {
 		String stripeErrorType = exception.getStripeError() == null ? null : exception.getStripeError().getType();
 		String stripeErrorCode = exception.getStripeError() == null ? null : exception.getStripeError().getCode();
@@ -108,7 +143,8 @@ public class StripeJavaCheckoutGateway implements StripeCheckoutGateway {
 
 		try {
 			Event event = Webhook.constructEvent(payload, signatureHeader, properties.webhookSecret());
-			return new StripeWebhookEventData(event.getId(), event.getType(), readCheckoutSession(event));
+			return new StripeWebhookEventData(event.getId(), event.getType(),
+					readCheckoutSession(event), readRefund(event));
 		}
 		catch (SignatureVerificationException exception) {
 			throw new BadRequestException("Invalid Stripe webhook signature");
@@ -157,6 +193,36 @@ public class StripeJavaCheckoutGateway implements StripeCheckoutGateway {
 				|| CHECKOUT_SESSION_ASYNC_PAYMENT_FAILED.equals(eventType);
 	}
 
+	private RefundCreateParams.Reason toStripeReason(StripeRefundReason reason) {
+		return switch (reason) {
+			case REQUESTED_BY_CUSTOMER -> RefundCreateParams.Reason.REQUESTED_BY_CUSTOMER;
+			case DUPLICATE -> RefundCreateParams.Reason.DUPLICATE;
+			case FRAUDULENT -> RefundCreateParams.Reason.FRAUDULENT;
+		};
+	}
+
+	private StripeRefundData readRefund(Event event) {
+		if (!isRefundEvent(event.getType())) {
+			return null;
+		}
+
+		StripeObject stripeObject = event.getDataObjectDeserializer()
+				.getObject()
+				.orElseThrow(() -> new BadRequestException("Stripe webhook payload could not be read"));
+
+		if (!(stripeObject instanceof Refund refund)) {
+			throw new BadRequestException("Stripe webhook payload is not a refund");
+		}
+
+		return toRefundData(refund);
+	}
+
+	private boolean isRefundEvent(String eventType) {
+		return REFUND_CREATED.equals(eventType)
+				|| REFUND_UPDATED.equals(eventType)
+				|| REFUND_FAILED.equals(eventType);
+	}
+
 	private StripeCheckoutSessionData toSessionData(Session session) {
 		String orderReference = session.getMetadata() == null
 				? null
@@ -171,6 +237,19 @@ public class StripeJavaCheckoutGateway implements StripeCheckoutGateway {
 				session.getCurrency(),
 				session.getPaymentIntent(),
 				orderReference
+		);
+	}
+
+	private StripeRefundData toRefundData(Refund refund) {
+		return new StripeRefundData(
+				refund.getId(),
+				refund.getStatus(),
+				refund.getAmount() == null ? null : Math.toIntExact(refund.getAmount()),
+				refund.getCurrency(),
+				refund.getPaymentIntent(),
+				refund.getReason(),
+				refund.getFailureReason(),
+				refund.getMetadata() == null ? java.util.Map.of() : refund.getMetadata()
 		);
 	}
 

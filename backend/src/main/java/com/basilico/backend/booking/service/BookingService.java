@@ -60,6 +60,7 @@ public class BookingService {
 
 		Booking savedBooking = bookingRepository.save(booking);
 		notificationService.queueBookingRequestReceived(savedBooking);
+		notificationService.queueRestaurantNewBookingAlert(savedBooking);
 		return toBookingResponse(savedBooking);
 	}
 

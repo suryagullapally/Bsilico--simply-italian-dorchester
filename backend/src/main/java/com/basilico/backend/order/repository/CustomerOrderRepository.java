@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,6 +13,8 @@ import com.basilico.backend.order.entity.CustomerOrder;
 import com.basilico.backend.order.entity.FulfilmentType;
 import com.basilico.backend.order.entity.OrderStatus;
 import com.basilico.backend.order.entity.PaymentStatus;
+
+import jakarta.persistence.LockModeType;
 
 public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Long> {
 
@@ -30,6 +33,10 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Lo
 
 	@Query("select customerOrder from CustomerOrder customerOrder where customerOrder.id = :id")
 	Optional<CustomerOrder> findDetailedById(@Param("id") Long id);
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select customerOrder from CustomerOrder customerOrder where customerOrder.id = :id")
+	Optional<CustomerOrder> findByIdForUpdate(@Param("id") Long id);
 
 	@Query("select customerOrder from CustomerOrder customerOrder where customerOrder.orderReference = :orderReference")
 	Optional<CustomerOrder> findDetailedByOrderReference(@Param("orderReference") String orderReference);

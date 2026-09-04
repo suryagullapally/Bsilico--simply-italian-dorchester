@@ -272,6 +272,7 @@ MAIL_SMTP_STARTTLS=true
 MAIL_WORKER_ENABLED=false
 MAIL_RETRY_TRIGGER_TOKEN=
 BASILICO_ORDER_ALERT_EMAIL=
+BASILICO_BOOKING_ALERT_EMAIL=
 ADMIN_WEB_BASE_URL=https://admin.basilicodorchester.co.uk
 ```
 
@@ -279,8 +280,10 @@ Verify:
 
 - sender address/domain is verified with the SMTP provider
 - `BASILICO_ORDER_ALERT_EMAIL` is set to `basilico2912@gmail.com`
+- `BASILICO_BOOKING_ALERT_EMAIL` is set to `basilico2921@gmail.com`
 - test order/booking emails arrive
 - paid customer orders also create the internal restaurant new-order alert
+- customer booking requests also create the internal restaurant new-booking alert
 - failed notifications are recorded and retryable
 - `POST /api/internal/notifications/process-pending` rejects missing/wrong
   `X-Basilico-Retry-Token`
@@ -325,8 +328,10 @@ Customer:
 - [ ] basket quantity and subtotal work
 - [ ] collection checkout creates order
 - [ ] Stripe test successful payment updates order to `PAID` + `NEW`
+- [ ] full admin Stripe refund updates order payment status to `REFUNDED`
 - [ ] failed Stripe payment shows retry-safe UX
 - [ ] booking request submits and shows reference
+- [ ] booking request creates restaurant internal booking alert
 - [ ] mobile customer QA completed
 - [ ] desktop customer QA completed
 

@@ -6,6 +6,7 @@ import type {
   OrderStatus,
   PageResponse,
   PaymentStatus,
+  RefundOrderRequest,
 } from "@/types/admin";
 
 export type OrderFilters = {
@@ -43,5 +44,13 @@ export async function updateOrderPaymentStatus(
     `/api/admin/orders/${id}/payment-status`,
     "PATCH",
     { paymentStatus },
+  );
+}
+
+export async function refundOrder(id: string | number, request: RefundOrderRequest) {
+  return adminMutation<AdminOrderResponse>(
+    `/api/admin/orders/${id}/refund`,
+    "POST",
+    request,
   );
 }

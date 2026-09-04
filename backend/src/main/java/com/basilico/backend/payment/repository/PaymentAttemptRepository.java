@@ -16,5 +16,8 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, 
 	Optional<PaymentAttempt> findFirstByOrderAndStatusOrderByCreatedAtDesc(CustomerOrder order,
 			PaymentAttemptStatus status);
 
+	Optional<PaymentAttempt> findFirstByOrderAndStatusAndStripePaymentIntentIdIsNotNullOrderByCreatedAtDesc(
+			CustomerOrder order, PaymentAttemptStatus status);
+
 	List<PaymentAttempt> findByOrderIdOrderByCreatedAtDesc(Long orderId);
 }

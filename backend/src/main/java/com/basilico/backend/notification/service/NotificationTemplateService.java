@@ -12,6 +12,7 @@ import com.basilico.backend.order.entity.FulfilmentType;
 import com.basilico.backend.order.entity.OrderItem;
 import com.basilico.backend.order.entity.PaymentStatus;
 import com.basilico.backend.order.entity.TimingType;
+import com.basilico.backend.payment.entity.PaymentRefund;
 
 @Service
 public class NotificationTemplateService {
@@ -128,6 +129,30 @@ public class NotificationTemplateService {
 				""".formatted(order.getCustomerFirstName(), order.getOrderReference(), paymentLine, PHONE, BRAND));
 	}
 
+	public EmailContent orderRefunded(CustomerOrder order, PaymentRefund refund) {
+		return content("Your Basilico order has been refunded", """
+				Hi %s,
+
+				Your Basilico order has been refunded.
+
+				Order reference: %s
+				Refunded amount: %s
+
+				The refund has been sent back to your original payment method. The time it takes to appear depends on your bank or payment provider.
+
+				If you need help, please call %s.
+
+				%s
+				Dorchester
+				""".formatted(
+				order.getCustomerFirstName(),
+				order.getOrderReference(),
+				formatPence(refund.getAmountPence()),
+				PHONE,
+				BRAND
+		));
+	}
+
 	public EmailContent restaurantNewOrder(CustomerOrder order, String adminOrderUrl) {
 		String subject = "NEW BASILICO ORDER - " + order.getOrderReference() + " - "
 				+ formatPence(order.getTotalPence());
@@ -176,6 +201,46 @@ public class NotificationTemplateService {
 				formatPence(order.getTotalPence()),
 				order.getOrderNotes() == null ? "No notes supplied." : order.getOrderNotes(),
 				adminOrderUrl
+		);
+		return content(subject, text);
+	}
+
+	public EmailContent restaurantNewBooking(Booking booking, String adminBookingUrl) {
+		String subject = "NEW TABLE BOOKING - %d guests - %s - %s".formatted(
+				booking.getPartySize(),
+				formatTime(booking),
+				booking.getBookingDate().format(DateTimeFormatter.ofPattern("d MMM", Locale.UK))
+		);
+		String text = """
+				NEW TABLE BOOKING
+
+				Booking reference: %s
+
+				Customer:
+				%s %s
+				%s
+				%s
+
+				Booking date: %s
+				Booking time: %s
+				Number of guests: %d
+
+				Special requests:
+				%s
+
+				OPEN BOOKING IN BASILICO ADMIN
+				%s
+				""".formatted(
+				booking.getBookingReference(),
+				booking.getFirstName(),
+				booking.getLastName(),
+				booking.getPhone(),
+				booking.getEmail(),
+				formatDate(booking),
+				formatTime(booking),
+				booking.getPartySize(),
+				booking.getSpecialRequests() == null ? "None" : booking.getSpecialRequests(),
+				adminBookingUrl
 		);
 		return content(subject, text);
 	}

@@ -7,6 +7,9 @@ import com.basilico.backend.order.entity.FulfilmentType;
 import com.basilico.backend.order.entity.OrderStatus;
 import com.basilico.backend.order.entity.PaymentStatus;
 import com.basilico.backend.payment.dto.PaymentAttemptResponse;
+import com.basilico.backend.payment.dto.PaymentRefundResponse;
+import com.basilico.backend.payment.entity.PaymentRefundReason;
+import com.basilico.backend.payment.entity.PaymentRefundStatus;
 
 public record AdminOrderResponse(
 		Long id,
@@ -27,6 +30,14 @@ public record AdminOrderResponse(
 		Integer estimatedDeliveryMinutes,
 		List<OrderItemResponse> items,
 		List<PaymentAttemptResponse> paymentAttempts,
+		List<PaymentRefundResponse> refunds,
+		boolean refundEligible,
+		PaymentRefundStatus refundStatus,
+		Integer refundAmountPence,
+		PaymentRefundReason refundReason,
+		OffsetDateTime refundRequestedAt,
+		OffsetDateTime refundCompletedAt,
+		String refundFailureReason,
 		OffsetDateTime createdAt,
 		OffsetDateTime updatedAt
 ) {

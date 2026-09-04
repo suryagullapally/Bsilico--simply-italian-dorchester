@@ -139,6 +139,13 @@ Admin-web is marked `noindex,nofollow` with metadata, `robots.txt` and an
 The Payments page uses real order and payment-attempt data from the backend.
 Stripe Checkout Sessions and webhooks are the authoritative payment flow.
 
+Order detail includes a full Stripe refund control for eligible paid orders.
+The admin app sends only the refund reason and an optional note. The backend
+loads the Stripe PaymentIntent and full order total from PostgreSQL, calls
+Stripe with an idempotency key, records the refund in `payment_refunds`, and
+updates the order to `REFUNDED` only after Stripe confirms success. Partial
+refunds and browser-supplied refund amounts are not supported in this phase.
+
 The old manual payment-status control is hidden by default. It appears only when
 admin-web is started with:
 
@@ -160,10 +167,12 @@ Keep both disabled outside deliberate local development testing.
 - Orders list and order detail
 - Order status controls
 - Stripe payment-attempt visibility on order detail
+- Full Stripe refund control for eligible paid orders
 - Development payment status control when explicitly enabled
 - Bookings list and booking detail
 - Booking status controls
 - Messages page for customer email notification history
+- Internal restaurant booking/order alerts in notification history
 - Order and booking communication panels for manual customer email
 - Menu item list grouped by real category order
 - Sold out, featured and archive controls

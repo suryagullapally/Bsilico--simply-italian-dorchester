@@ -100,6 +100,7 @@ basilico:
       initial-delay-ms: ${MAIL_INITIAL_DELAY_MS:5000}
     restaurant:
       order-alert-email: ${BASILICO_ORDER_ALERT_EMAIL:}
+      booking-alert-email: ${BASILICO_BOOKING_ALERT_EMAIL:}
       admin-base-url: ${ADMIN_WEB_BASE_URL:http://localhost:3002}
   delivery:
     postcodes-io:

@@ -71,6 +71,7 @@ SMTP email:
 | `MAIL_INITIAL_DELAY_MS` | No | Defaults to `5000`. |
 | `MAIL_HEALTH_ENABLED` | No | Defaults to `false`; enable only if SMTP health should affect readiness. |
 | `BASILICO_ORDER_ALERT_EMAIL` | Recommended before taking real payments | Internal restaurant recipient for new paid-order alerts. For Basilico production, set this to `basilico2912@gmail.com`. If absent, customer payments still succeed and the missing alert configuration is logged. |
+| `BASILICO_BOOKING_ALERT_EMAIL` | Recommended before taking real bookings | Internal restaurant recipient for new booking alerts. For Basilico production, set this to `basilico2921@gmail.com`. If absent, customer bookings still succeed and the missing alert configuration is logged. |
 
 Delivery/geocoding:
 
@@ -160,6 +161,8 @@ Required before email live:
 | `MAIL_SMTP_AUTH` / `MAIL_SMTP_STARTTLS` | Usually `true` / `true` for production SMTP. |
 | `MAIL_WORKER_ENABLED` | Keep `false` for Cloud Run request-based billing; retries are triggered externally. |
 | `MAIL_RETRY_TRIGGER_TOKEN` | Long random secret used by Cloud Scheduler in `X-Basilico-Retry-Token`. |
+| `BASILICO_ORDER_ALERT_EMAIL` | Internal restaurant recipient for paid-order alerts. |
+| `BASILICO_BOOKING_ALERT_EMAIL` | Internal restaurant recipient for new booking alerts. |
 
 Required before delivery live:
 

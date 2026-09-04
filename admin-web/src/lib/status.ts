@@ -47,8 +47,10 @@ export function statusTone(value: string) {
 
   if (
     value === "PAID" ||
+    value === "REFUNDED" ||
     value === "CONFIRMED" ||
     value === "COMPLETED" ||
+    value === "SUCCEEDED" ||
     value === "SENT"
   ) {
     return "success";
@@ -58,12 +60,18 @@ export function statusTone(value: string) {
     value === "CANCELLED" ||
     value === "DECLINED" ||
     value === "FAILED" ||
+    value === "CANCELED" ||
     value === "NO_SHOW"
   ) {
     return "danger";
   }
 
-  if (value === "PREPARING" || value === "ACCEPTED" || value === "SENDING") {
+  if (
+    value === "PREPARING" ||
+    value === "ACCEPTED" ||
+    value === "SENDING" ||
+    value === "REQUIRES_ACTION"
+  ) {
     return "working";
   }
 

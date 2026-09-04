@@ -73,6 +73,7 @@ MAIL_RETRY_DELAY_MS=30000
 MAIL_INITIAL_DELAY_MS=5000
 MAIL_HEALTH_ENABLED=false
 BASILICO_ORDER_ALERT_EMAIL=
+BASILICO_BOOKING_ALERT_EMAIL=
 POSTCODES_IO_BASE_URL=https://api.postcodes.io
 POSTCODES_IO_TIMEOUT_MS=2500
 POSTCODES_IO_CACHE_TTL_SECONDS=86400
@@ -599,6 +600,7 @@ and payment-status mutations also require CSRF protection.
 - `GET /api/admin/orders/{id}`
 - `PATCH /api/admin/orders/{id}/status`
 - `PATCH /api/admin/orders/{id}/payment-status`
+- `POST /api/admin/orders/{id}/refund`
 
 The payment-status patch endpoint is temporary development tooling and is
 disabled by default. It returns a conflict unless:
@@ -609,6 +611,20 @@ BASILICO_ALLOW_MANUAL_PAYMENT_STATUS=true
 
 Stripe webhooks are the authoritative payment path. Keep the manual payment
 control disabled outside deliberate local development testing.
+
+`POST /api/admin/orders/{id}/refund` issues a full Stripe refund for an
+eligible paid order. The browser sends only an operational reason and optional
+note; the backend loads the paid Stripe PaymentIntent and order total from
+PostgreSQL. Partial refunds, browser-supplied amounts and browser-supplied
+Stripe IDs are not accepted. The endpoint is protected by admin session
+authentication and CSRF.
+
+Refunds are recorded in `payment_refunds` before Stripe is called. If Stripe
+confirms a full refund, the order payment status becomes `REFUNDED` and the
+customer receives an `ORDER_REFUNDED` email. The order workflow status is not
+changed automatically, so staff can decide whether the order should also be
+cancelled. Failed or pending refunds are retained for audit/history and block
+duplicate active refund attempts.
 
 Orders keep snapshots of:
 
@@ -642,6 +658,7 @@ MAIL_RETRY_TRIGGER_TOKEN=
 MAIL_WORKER_ENABLED=true
 MAIL_HEALTH_ENABLED=false
 BASILICO_ORDER_ALERT_EMAIL=
+BASILICO_BOOKING_ALERT_EMAIL=
 ADMIN_WEB_BASE_URL=https://admin.basilicodorchester.co.uk
 ```
 
@@ -682,10 +699,13 @@ Automatic notification triggers:
 - `ORDER_ACCEPTED`: when Admin changes an order to `ACCEPTED`.
 - `ORDER_READY`: when Admin changes an order to `READY`.
 - `ORDER_CANCELLED`: when Admin changes an order to `CANCELLED`.
+- `ORDER_REFUNDED`: when Stripe confirms a full customer refund.
 - `RESTAURANT_NEW_ORDER`: internal restaurant alert only after Stripe webhook
   verification marks an order `PAID` and moves it to `NEW`.
 - `BOOKING_REQUEST_RECEIVED`: after a public booking request is stored as
   `REQUESTED`.
+- `RESTAURANT_NEW_BOOKING`: internal restaurant alert after a public booking
+  request is stored as `REQUESTED`.
 - `BOOKING_CONFIRMED`, `BOOKING_DECLINED`, `BOOKING_CANCELLED`: when Admin
   changes booking status to those states.
 
@@ -700,6 +720,12 @@ For Basilico production, set `BASILICO_ORDER_ALERT_EMAIL=basilico2912@gmail.com`
 If that variable is missing, payment and order status changes still succeed; the
 configuration issue is logged and can be fixed without reversing the customer
 payment.
+
+New booking alerts use `RESTAURANT_NEW_BOOKING:<booking-id>` and are sent to
+`BASILICO_BOOKING_ALERT_EMAIL`. For Basilico production, set
+`BASILICO_BOOKING_ALERT_EMAIL=basilico2921@gmail.com`. If the variable is
+missing, the customer booking is still stored and the customer booking-request
+email is still queued; the missing restaurant alert configuration is logged.
 
 Emails are plain text plus simple HTML multipart messages. They include Basilico
 context, order or booking references, and customer-facing status truth. They do

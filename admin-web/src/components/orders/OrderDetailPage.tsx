@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CommunicationPanel } from "@/components/messages/CommunicationPanel";
 import { OrderStatusActions } from "@/components/orders/OrderStatusActions";
+import { RefundPaymentPanel } from "@/components/orders/RefundPaymentPanel";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatDate, formatDateTime, formatTime } from "@/lib/date-time";
 import { formatGbpPennies } from "@/lib/format-price";
@@ -46,6 +47,8 @@ export function OrderDetailPage({
               </div>
             </div>
           </section>
+
+          <RefundPaymentPanel order={order} onOrderUpdated={onOrderUpdated} />
 
           <section className="panel">
             <div className="panel__body">

@@ -6,5 +6,7 @@ public interface StripeCheckoutGateway {
 
 	StripeCheckoutSessionData retrieveCheckoutSession(String sessionId);
 
+	StripeRefundData createRefund(StripeRefundCreateCommand command);
+
 	StripeWebhookEventData constructWebhookEvent(String payload, String signatureHeader);
 }
